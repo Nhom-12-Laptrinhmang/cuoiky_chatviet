@@ -1,0 +1,9 @@
+Flask
+Flask-SocketIO
+Flask-Migrate
+Flask-SQLAlchemy
+pyngrok
+redis
+python-dotenv
+Werkzeug
+PyJWT

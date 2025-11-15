@@ -1,0 +1,19 @@
+INFO:pyngrok.ngrok:Opening tunnel named: http-5000-869e8717-5a2d-489d-bfb6-442bf89a7cb6
+Downloading ngrok ...[WARNING] Ngrok connection failed: An error occurred while downloading ngrok from https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-darwin-arm64.zip: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1000)>
+[INFO] Running without ngrok tunnel - you can access via http://localhost:5000
+ * Serving Flask app 'app'
+ * Debug mode: off
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.1.250:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug:127.0.0.1 - - [11/Nov/2025 22:57:40] "OPTIONS /register HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [11/Nov/2025 22:57:42] "OPTIONS /register HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [11/Nov/2025 22:57:50] "OPTIONS /register HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [11/Nov/2025 22:57:51] "GET /users HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [11/Nov/2025 22:58:20] "OPTIONS /login HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [11/Nov/2025 22:58:24] "OPTIONS /register HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [11/Nov/2025 22:58:30] "OPTIONS /forgot-password HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [11/Nov/2025 23:01:03] "[33mGET / HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [11/Nov/2025 23:01:35] "OPTIONS /register HTTP/1.1" 200 -
