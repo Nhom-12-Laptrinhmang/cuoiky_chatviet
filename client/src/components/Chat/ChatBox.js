@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { initializeSocket, sendMessage, onReceiveMessage, joinUserRoom, sendReaction, onReaction, sendTyping, onTyping, onMessageSentAck } from '../../services/socket';
+import { initializeSocket, sendMessage, onReceiveMessage, joinUserRoom, sendReaction, onReaction, sendTyping, onTyping, onMessageSentAck, sendSticker } from '../../services/socket';
 import { userAPI, messageAPI, groupAPI } from '../../services/api';
 import MessageBubble from './MessageBubble';
+import StickerButton from './StickerButton';
 import TypingIndicator from './TypingIndicator';
 import LogoutButton from '../Auth/LogoutButton';
 import ProfileModal from './ProfileModal';
@@ -73,6 +74,37 @@ const ChatBox = () => {
   // Ref để scroll xuống cuối chat
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // Gửi sticker trực tiếp
+  const handleSendSticker = (sticker) => {
+    if (!selectedUser || !currentUserId) return;
+    const clientMessageId = `client_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
+    sendSticker(currentUserId, selectedUser.id, sticker.id, sticker.url, {
+      client_message_id: clientMessageId,
+    });
+    // Thêm sticker vào UI ngay (optimistic)
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: clientMessageId,
+        sender_id: currentUserId,
+        receiver_id: selectedUser.id,
+        message_type: 'sticker',
+        sticker_id: sticker.id,
+        sticker_url: sticker.url,
+        timestamp: new Date().toISOString(),
+        isSent: true,
+        status: 'sending',
+      },
+    ]);
+  };
+
+  // Thêm emoji vào input (không gửi ngay)
+  const handleAddEmoji = (emoji) => {
+    setMessageText((prev) => prev + emoji);
+    // Auto-focus input để user có thể continue typing hoặc gửi
+    document.querySelector('.message-input')?.focus();
+  };
 
   // Helper to set selectedUser + save to localStorage
   const handleSelectUser = (user) => {
@@ -913,6 +945,7 @@ const ChatBox = () => {
 
             {/* Message Input */}
             <form onSubmit={handleSendMessage} className="message-input-form">
+              <StickerButton onSelectSticker={handleSendSticker} onAddEmoji={handleAddEmoji} />
               <input
                 type="text"
                 value={messageText}

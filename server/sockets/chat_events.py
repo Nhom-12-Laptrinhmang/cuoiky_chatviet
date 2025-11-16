@@ -131,6 +131,74 @@ def register_chat_events(socketio):
         }
         socketio.emit('message_reaction', reaction_data, broadcast=True)
 
+    @socketio.on('send_sticker')
+    def handle_send_sticker(data):
+        """Handle sticker messages (Giphy, EmojiOne, Twemoji, custom pack)."""
+        sender_id = data.get('sender_id')
+        receiver_id = data.get('receiver_id')
+        sticker_id = data.get('sticker_id')  # Giphy ID or custom pack ID
+        sticker_url = data.get('sticker_url')  # URL for sticker image
+        client_message_id = data.get('client_message_id')
+        
+        print(f"[CHAT][NHẬN] [STICKER] sender={sender_id} receiver={receiver_id} sticker_id={sticker_id}")
+        
+        if not sender_id or not receiver_id or not sticker_url:
+            print(f"[ERROR] Missing required fields for sticker")
+            print("[STICKER] END - FAILED\n")
+            return
+        
+        try:
+            # Save sticker message to DB
+            msg = Message(
+                sender_id=sender_id,
+                receiver_id=receiver_id,
+                content=sticker_url,
+                message_type='sticker',
+                sticker_id=sticker_id,
+                sticker_url=sticker_url
+            )
+            db.session.add(msg)
+            db.session.commit()
+            print(f"[CHAT][GỬI] ✅ Sticker saved to DB: message_id={msg.id}")
+        except Exception as e:
+            print(f"[ERROR] ❌ ERROR saving sticker to DB: {e}")
+            db.session.rollback()
+            print("[STICKER] END - FAILED (DB save)\n")
+            return
+        
+        # Prepare sticker message data
+        sticker_data = {
+            'id': msg.id,
+            'sender_id': sender_id,
+            'receiver_id': receiver_id,
+            'message_type': 'sticker',
+            'sticker_id': sticker_id,
+            'sticker_url': sticker_url,
+            'timestamp': msg.timestamp.isoformat(),
+            'status': 'sent',
+        }
+        
+        # Send ACK back to sender
+        if client_message_id:
+            ack_data = {
+                'client_message_id': client_message_id,
+                'message_id': msg.id,
+                'status': 'sent',
+            }
+            print(f"[CHAT][GỬI] 📋 Sending ACK for sticker to sender: {ack_data}")
+            socketio.emit('message_sent_ack', ack_data, room=request.sid)
+        
+        # Broadcast to receiver's room
+        receiver_room = f'user-{receiver_id}'
+        print(f"[CHAT][GỬI] 📤 Emitting sticker to receiver room '{receiver_room}'...")
+        try:
+            socketio.emit('receive_message', sticker_data, room=receiver_room)
+            print(f"[CHAT][GỬI] ✅ Sticker emitted to {receiver_room}")
+        except Exception as e:
+            print(f"[ERROR] ❌ ERROR emitting sticker to {receiver_room}: {e}")
+        
+        print("[CHAT][GỬI] [STICKER] END - SUCCESS")
+
     @socketio.on('typing')
     def handle_typing(data):
         """Broadcast typing indicator."""

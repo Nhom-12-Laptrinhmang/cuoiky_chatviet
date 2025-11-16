@@ -122,6 +122,24 @@ export const sendReaction = (messageId, userId, reaction) => {
   });
 };
 
+// Gửi sticker (Giphy, EmojiOne, Twemoji, custom pack)
+export const sendSticker = (senderId, receiverId, stickerId, stickerUrl, opts = {}) => {
+  const sock = getSocket();
+  const payload = {
+    sender_id: senderId,
+    receiver_id: receiverId,
+    sticker_id: stickerId,
+    sticker_url: stickerUrl,
+    client_message_id: opts.client_message_id || null,
+  };
+  console.log('\n========== [SEND_STICKER] CLIENT ==========');
+  console.log('Payload:', payload);
+  console.log('Socket connected?', sock?.connected);
+  sock.emit('send_sticker', payload);
+  console.log('✅ Sticker emitted to server');
+  console.log('========== \n');
+};
+
 // Gửi typing indicator
 export const sendTyping = (senderId, receiverId, isTyping) => {
   const sock = getSocket();

@@ -29,7 +29,18 @@ const MessageBubble = ({ message, isSent, onReply, onReaction, onEmojiHover }) =
       )}
 
       <div className="message-content">
-        {message.file_url ? (
+        {message.message_type === 'sticker' ? (
+          // Hiển thị sticker
+          <img 
+            src={message.sticker_url} 
+            alt="sticker" 
+            style={{ 
+              maxWidth: 200, 
+              maxHeight: 200, 
+              borderRadius: 8 
+            }} 
+          />
+        ) : message.file_url ? (
           <div style={{ marginBottom: '8px' }}>
             <a
               href={message.file_url}
