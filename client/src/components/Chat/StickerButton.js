@@ -21,6 +21,19 @@ const EMOJIS = [
 const StickerButton = ({ onSelectSticker, onAddEmoji }) => {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState('sticker'); // 'sticker' or 'emoji'
+  const [selectedSticker, setSelectedSticker] = useState(null); // For sticker preview
+
+  const handleStickerSelect = (sticker) => {
+    setSelectedSticker(sticker);
+  };
+
+  const handleSendSticker = () => {
+    if (selectedSticker) {
+      onSelectSticker(selectedSticker);
+      setSelectedSticker(null);
+      setOpen(false);
+    }
+  };
 
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -29,7 +42,7 @@ const StickerButton = ({ onSelectSticker, onAddEmoji }) => {
         title="Gửi sticker hoặc emoji" 
         style={{ fontSize: 22, background: 'none', border: 'none', cursor: 'pointer' }}
       >
-        🖼️
+        😊
       </button>
 
       {open && (
@@ -54,7 +67,10 @@ const StickerButton = ({ onSelectSticker, onAddEmoji }) => {
             padding: '12px 0',
           }}>
             <button
-              onClick={() => setTab('sticker')}
+              onClick={() => {
+                setTab('sticker');
+                setSelectedSticker(null);
+              }}
               style={{
                 flex: 1,
                 background: 'none',
@@ -88,7 +104,10 @@ const StickerButton = ({ onSelectSticker, onAddEmoji }) => {
               EMOJI
             </button>
             <button
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                setSelectedSticker(null);
+              }}
               style={{
                 background: 'none',
                 border: 'none',
@@ -110,35 +129,85 @@ const StickerButton = ({ onSelectSticker, onAddEmoji }) => {
           }}>
             {tab === 'sticker' ? (
               // STICKER TAB
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gap: 12,
-              }}>
-                {STICKERS.map((sticker) => (
-                  <img
-                    key={sticker.id}
-                    src={sticker.url}
-                    alt="sticker"
-                    style={{
-                      width: '100%',
-                      aspectRatio: '1',
-                      cursor: 'pointer',
-                      borderRadius: 6,
-                      transition: 'transform 0.2s',
-                    }}
-                    onClick={() => {
-                      onSelectSticker(sticker);
-                      setOpen(false);
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'scale(1.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'scale(1)';
-                    }}
-                  />
-                ))}
+              <div>
+                {/* Sticker Preview + Send Button */}
+                {selectedSticker && (
+                  <div style={{
+                    textAlign: 'center',
+                    marginBottom: 16,
+                    padding: '12px',
+                    background: '#f9f9f9',
+                    borderRadius: 8,
+                    borderBottom: '1px solid #eee',
+                  }}>
+                    <img 
+                      src={selectedSticker.url} 
+                      alt="preview"
+                      style={{ maxWidth: '150px', maxHeight: '150px', marginBottom: '12px' }}
+                    />
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                      <button
+                        onClick={handleSendSticker}
+                        style={{
+                          background: '#0b5ed7',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '8px 16px',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          fontSize: 14,
+                          fontWeight: 600,
+                        }}
+                      >
+                        ✓ Gửi
+                      </button>
+                      <button
+                        onClick={() => setSelectedSticker(null)}
+                        style={{
+                          background: '#f0f0f0',
+                          color: '#333',
+                          border: 'none',
+                          padding: '8px 16px',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          fontSize: 14,
+                        }}
+                      >
+                        Hủy
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sticker Grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: 12,
+                }}>
+                  {STICKERS.map((sticker) => (
+                    <img
+                      key={sticker.id}
+                      src={sticker.url}
+                      alt="sticker"
+                      style={{
+                        width: '100%',
+                        aspectRatio: '1',
+                        cursor: 'pointer',
+                        borderRadius: 6,
+                        transition: 'transform 0.2s, border 0.2s',
+                        border: selectedSticker?.id === sticker.id ? '3px solid #0b5ed7' : '2px solid transparent',
+                      }}
+                      onClick={() => handleStickerSelect(sticker)}
+                      onMouseEnter={(e) => {
+                        e.target.style.transform = 'scale(1.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = 'scale(1)';
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
             ) : (
               // EMOJI TAB
@@ -158,6 +227,7 @@ const StickerButton = ({ onSelectSticker, onAddEmoji }) => {
                           key={emoji}
                           onClick={() => {
                             onAddEmoji(emoji);
+                            setOpen(false);
                           }}
                           style={{
                             background: 'none',
