@@ -33,6 +33,11 @@ const api = axios.create({
   baseURL: API_URL,
 });
 
+// Direct backend instance: use explicit backend host when proxying causes method issues.
+// Use REACT_APP_BACKEND_URL to override (e.g. http://localhost:5000). Defaults to http://localhost:5000.
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const apiDirect = axios.create({ baseURL: BACKEND_URL });
+
 // Simple in-browser mock storage for demoing auth when backend is unavailable.
 const mockStorageKey = 'mock_users';
 const mockOtpKey = 'mock_otps';
@@ -72,7 +77,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log('[API REQUEST]', config.method?.toUpperCase(), config.url, config.data || config.params || '');
+    if (process.env.NODE_ENV === 'development') console.debug('[API REQUEST]', config.method?.toUpperCase(), config.url, config.data || config.params || '');
     return config;
   },
   (error) => {
@@ -83,11 +88,38 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
-    console.log('[API RESPONSE]', response.config.url, response.status, response.data);
+    if (process.env.NODE_ENV === 'development') console.debug('[API RESPONSE]', response.config.url, response.status, response.data);
     return response;
   },
   (error) => {
     console.error('[API RESPONSE ERROR]', error?.config?.url, error?.response?.status, error?.response?.data);
+    return Promise.reject(error);
+  }
+);
+
+// Mirror auth header + logging on direct instance so fallbacks carry the token.
+apiDirect.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (process.env.NODE_ENV === 'development') console.debug('[API DIRECT REQUEST]', config.method?.toUpperCase(), config.url, config.data || config.params || '');
+    return config;
+  },
+  (error) => {
+    console.error('[API DIRECT REQUEST ERROR]', error);
+    return Promise.reject(error);
+  }
+);
+
+apiDirect.interceptors.response.use(
+  (response) => {
+    if (process.env.NODE_ENV === 'development') console.debug('[API DIRECT RESPONSE]', response.config.url, response.status, response.data);
+    return response;
+  },
+  (error) => {
+    console.error('[API DIRECT RESPONSE ERROR]', error?.config?.url, error?.response?.status, error?.response?.data);
     return Promise.reject(error);
   }
 );
@@ -124,8 +156,8 @@ export const authAPI = {
     return Promise.resolve();
   },
 
-  forgotPassword: async (contact) => {
-    if (!USE_MOCK) return api.post('/forgot-password', { contact });
+  forgotPassword: async (contact, method = 'auto') => {
+    if (!USE_MOCK) return api.post('/forgot-password', { contact, method });
     await mockApiDelay();
     const users = readMockUsers();
     const found = users.find((u) => u.username === contact || u.phone_number === contact);
@@ -175,6 +207,24 @@ export const userAPI = {
   updateMe: (payload) => api.patch('/users/me', payload),
   addFriend: (otherId) => api.post(`/friends/${otherId}/add`),
   acceptFriend: (otherId) => api.post(`/friends/${otherId}/accept`),
+  removeFriend: async (otherId) => {
+    // Try DELETE first; if that fails (405 or proxy issues), try direct backend POST fallback.
+    try {
+      return await api.delete(`/friends/${otherId}/remove`);
+    } catch (err) {
+      // If DELETE was rejected (Method Not Allowed or proxy removed it), attempt a direct POST to backend.
+      try {
+        return await apiDirect.post(`/friends/${otherId}/remove`);
+      } catch (err2) {
+        // If direct also failed, but server originally responded 405, try POST via proxied api as last resort
+        if (err?.response?.status === 405) {
+          return api.post(`/friends/${otherId}/remove`);
+        }
+        // Re-throw the first error if nothing worked (preserve original failure details)
+        throw err;
+      }
+    }
+  },
   getFriends: () => api.get('/friends'),
   getFriendRequests: () => api.get('/friends/requests'),
 };
@@ -204,3 +254,4 @@ export const groupAPI = {
 };
 
 export default api;
+export { apiDirect };

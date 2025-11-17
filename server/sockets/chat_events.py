@@ -9,6 +9,11 @@ from models.contact_sync_model import ContactSync
 from config.database import db
 import logging
 from services.auth_service import decode_token
+import traceback
+import os
+
+# module logger
+logger = logging.getLogger(__name__)
 
 # Store mapping of user_id -> socket.sid for direct targeting
 user_sockets = {}
@@ -187,7 +192,7 @@ def register_chat_events(socketio):
     @socketio.on('connect')
     def handle_connect():
         ip = request.remote_addr
-        print(f"[CHAT][NHẬN] [CONNECT] Connected from {ip}, sid={request.sid}")
+        logger.info("[CHAT][CONNECT] Connected from %s sid=%s", ip, request.sid)
         emit('connected', {'msg': 'Connected to chat server'})
 
     @socketio.on('join')
@@ -197,7 +202,7 @@ def register_chat_events(socketio):
           - user_id: join user's personal room named `user-<id>`
           - room: arbitrary room name (e.g., `group-<id>` or conversation room)
         """
-        print(f"[CHAT][NHẬN] [JOIN] sid={request.sid} data={data}")
+        logger.info("[CHAT][JOIN] sid=%s data=%s", request.sid, data)
         
         user_id = data.get('user_id')
         room = data.get('room')
@@ -206,39 +211,22 @@ def register_chat_events(socketio):
             room_name = f'user-{user_id}'
             # Store user_id -> sid mapping
             user_sockets[user_id] = request.sid
-            print(f"[CHAT][NHẬN] ✅ Stored mapping: user_id={user_id} → sid={request.sid}")
-            
-            # Update user status to online in database
-            try:
-                user = User.query.get(int(user_id))
-                if user:
-                    user.status = 'online'
-                    db.session.commit()
-                    print(f"[CHAT][NHẬN] ✅ Updated user {user_id} status to 'online'")
-            except Exception as e:
-                print(f"[CHAT][NHẬN] ⚠️  Error updating user status: {e}")
-                db.session.rollback()
+            logger.debug("Stored mapping: user_id=%s -> sid=%s", user_id, request.sid)
         elif room:
             room_name = room
-            print(f"Using explicit room: {room_name}")
+            logger.debug("Using explicit room: %s", room_name)
         else:
             # nothing sensible to join
-            print("❌ No user_id or room provided")
-            print("[JOIN] END - FAILED\n")
+            logger.warning("No user_id or room provided in join request from sid=%s", request.sid)
+            logger.debug("[JOIN] END - FAILED")
             return
 
         join_room(room_name)
-        print(f"[CHAT][GỬI] ✅ User joined room: {room_name}")
-        print(f"[CHAT][NHẬN] Current user_sockets mapping: {user_sockets}")
+        logger.info("User joined room: %s", room_name)
+        logger.debug("Current user_sockets mapping: %s", user_sockets)
         
         socketio.emit('user_joined', {'user_id': user_id, 'room': room_name}, room=room_name)
-        
-        # Broadcast online status to all connected users
-        if user_id:
-            socketio.emit('user_status_changed', {'user_id': user_id, 'status': 'online'}, broadcast=True)
-            print(f"[CHAT][GỬI] ✅ Broadcasted user {user_id} online status")
-        
-        print("[CHAT][GỬI] [JOIN] END - SUCCESS")
+        logger.info("[JOIN] END - SUCCESS user=%s room=%s", user_id, room_name)
 
     @socketio.on('send_message')
     def handle_send_message(data):
@@ -249,40 +237,83 @@ def register_chat_events(socketio):
         client_message_id = data.get('client_message_id')  # For ACK tracking
         reply_to_id = data.get('reply_to_id')  # Message ID being replied to
         forward_from_id = data.get('forward_from_id')  # Message ID being forwarded
-        
-        print(f"[CHAT][NHẬN] [SEND_MESSAGE] sid={request.sid} sender_id={sender_id} receiver_id={receiver_id} client_msg_id={client_message_id} content_preview={content[:30] if content else 'N/A'}")
 
-        if not sender_id or not receiver_id or not content:
-            print(f"[ERROR] Missing required fields: sender={sender_id}, receiver={receiver_id}, content_exists={bool(content)}")
-            print("[SEND_MESSAGE] END - FAILED (missing fields)\n")
+        logger.debug("[CHAT][RECV] send_message sid=%s sender=%s receiver=%s client_msg_id=%s preview=%s", request.sid, sender_id, receiver_id, client_message_id, content[:30] if content else 'N/A')
+
+        # Extra diagnostic logging to help trace issues with emoji-only messages.
+        # Log the Python repr, character length and UTF-8 byte length so we can
+        # confirm whether the payload arrives empty or gets mangled by transport.
+        try:
+            logger.info("[CHAT][DEBUG] incoming content repr=%r char_len=%s utf8_bytes=%s", content, len(content) if content is not None else 0, len(content.encode('utf-8')) if content is not None else 0)
+        except Exception:
+            logger.exception("[CHAT][DEBUG] Error while logging incoming content")
+
+        # Validate required fields. Treat None/absent content as invalid, but allow
+        # non-empty strings (including emoji-only strings). This avoids rejecting
+        # emoji-only messages due to falsy checks.
+        content_is_none = content is None
+        content_is_empty_str = isinstance(content, str) and content.strip() == ''
+
+        if not sender_id or not receiver_id or content_is_none or content_is_empty_str:
+            logger.warning("Missing required fields for send_message: sender=%s receiver=%s content_repr=%r empty=%s none=%s",
+                           sender_id, receiver_id, content, content_is_empty_str, content_is_none)
             return
 
         try:
-            # Save message to DB
+            # Debug prints to stdout to make failures visible in dev terminal
+            print(f"[DEBUG SEND_MESSAGE] received sender={sender_id} receiver={receiver_id} client_msg_id={client_message_id} content_repr={repr(content)}")
             # Check block list: if receiver has blocked sender, refuse delivery
-            blocked = Block.query.filter_by(user_id=receiver_id, target_id=sender_id).first()
+            try:
+                blocked = Block.query.filter_by(user_id=receiver_id, target_id=sender_id).first()
+            except Exception as e:
+                # If the Block table doesn't exist (dev DB schema mismatch), log and continue
+                logger.warning("Block check skipped due to error (schema may be missing): %s", e)
+                blocked = None
             if blocked:
-                print(f"[CHAT][NHẬN] Sender {sender_id} is blocked by receiver {receiver_id} - rejecting send")
+                logger.info("Sender %s is blocked by receiver %s - rejecting send", sender_id, receiver_id)
                 # Inform sender that message was blocked
                 if client_message_id:
-                    ack_data = {
-                        'client_message_id': client_message_id,
-                        'status': 'blocked',
-                    }
+                    ack_data = {'client_message_id': client_message_id, 'status': 'blocked'}
                     socketio.emit('message_sent_ack', ack_data, room=request.sid)
                 return
-            msg = Message(
-                sender_id=sender_id, 
-                receiver_id=receiver_id, 
-                content=content
-            )
+            # Save message to DB
+            print('[DEBUG SEND_MESSAGE] attempting to save to DB...')
+            msg = Message(sender_id=sender_id, receiver_id=receiver_id, content=content)
             db.session.add(msg)
             db.session.commit()
-            print(f"[CHAT][GỬI] ✅ Message saved to DB: message_id={msg.id}, timestamp={msg.timestamp}")
+            print('[DEBUG SEND_MESSAGE] DB commit succeeded, msg.id=', getattr(msg, 'id', None))
+            logger.info("Message saved to DB: message_id=%s timestamp=%s", msg.id, msg.timestamp)
         except Exception as e:
-            print(f"[ERROR] ❌ ERROR saving message to DB: {e}")
+            # Log exception to logger and also persist a traceback to a file for easier debugging
+            logger.exception("Error saving message to DB: %s", str(e))
+            try:
+                # write to /tmp for convenience
+                with open('/tmp/chat_save_error.log', 'a', encoding='utf-8') as fh:
+                    fh.write('\n--- Chat save error ---\n')
+                    fh.write(f"time: {__import__('datetime').datetime.utcnow().isoformat()}\n")
+                    fh.write(f"sender_id={sender_id} receiver_id={receiver_id} client_message_id={client_message_id}\n")
+                    fh.write(f"content repr: {repr(content)}\n")
+                    fh.write('traceback:\n')
+                    fh.write(traceback.format_exc())
+                    fh.write('\n-----------------------\n')
+                # also write a copy into project server folder so the repo tools can read it
+                proj_path = os.path.join(os.path.dirname(__file__), '..', 'chat_save_error.log')
+                with open(proj_path, 'a', encoding='utf-8') as fh2:
+                    fh2.write('\n--- Chat save error (project) ---\n')
+                    fh2.write(f"time: {__import__('datetime').datetime.utcnow().isoformat()}\n")
+                    fh2.write(f"sender_id={sender_id} receiver_id={receiver_id} client_message_id={client_message_id}\n")
+                    fh2.write(f"content repr: {repr(content)}\n")
+                    fh2.write('traceback:\n')
+                    fh2.write(traceback.format_exc())
+                    fh2.write('\n-----------------------\n')
+            except Exception:
+                logger.exception('Failed to write chat_save_error.log')
+
             db.session.rollback()
-            print("[SEND_MESSAGE] END - FAILED (DB save)\n")
+            # Notify sender of failure if client id provided
+            if client_message_id:
+                ack_data = {'client_message_id': client_message_id, 'status': 'error', 'error_detail': str(e)}
+                socketio.emit('message_sent_ack', ack_data, room=request.sid)
             return
 
         # Prepare message data to broadcast
@@ -296,27 +327,23 @@ def register_chat_events(socketio):
             'reply_to_id': reply_to_id,
             'forward_from_id': forward_from_id,
         }
-        
+
         # Send ACK back to sender (to confirm message saved with real ID)
         if client_message_id:
-            ack_data = {
-                'client_message_id': client_message_id,
-                'message_id': msg.id,
-                'status': 'sent',
-            }
-            print(f"[CHAT][GỬI] 📋 Sending ACK to sender: {ack_data}")
+            ack_data = {'client_message_id': client_message_id, 'message_id': msg.id, 'status': 'sent'}
             socketio.emit('message_sent_ack', ack_data, room=request.sid)
-        
+            logger.debug("Sent ACK to sender: %s", ack_data)
+
         # Broadcast to receiver's room
         receiver_room = f'user-{receiver_id}'
-        print(f"[CHAT][GỬI] 📤 Emitting to receiver room '{receiver_room}'...")
+        logger.debug("Emitting to receiver room '%s'", receiver_room)
         try:
             socketio.emit('receive_message', message_data, room=receiver_room)
-            print(f"[CHAT][GỬI] ✅ Emitted to {receiver_room}")
+            logger.info("Emitted message_id=%s to %s", msg.id, receiver_room)
         except Exception as e:
-            print(f"[ERROR] ❌ ERROR emitting to {receiver_room}: {e}")
-        
-        print("[CHAT][GỬI] [SEND_MESSAGE] END - SUCCESS")
+            logger.exception("Error emitting to %s: %s", receiver_room, str(e))
+
+        logger.debug("[SEND_MESSAGE] END - SUCCESS sender=%s receiver=%s message_id=%s", sender_id, receiver_id, msg.id)
 
     @socketio.on('add_reaction')
     def handle_add_reaction(data):
@@ -324,22 +351,23 @@ def register_chat_events(socketio):
         message_id = data.get('message_id')
         user_id = data.get('user_id')
         reaction = data.get('reaction')  # emoji like '❤️', '😂', etc
-        
-        print(f"[CHAT][NHẬN] [REACTION] message_id={message_id} user={user_id} reaction={reaction}")
+        logger.debug("[CHAT][RECV] add_reaction message_id=%s user=%s reaction=%s", message_id, user_id, reaction)
+
         if not message_id or not user_id or not reaction:
-            print('[REACTION] Missing fields')
+            logger.warning("Missing fields in add_reaction: message_id=%s user_id=%s reaction=%s", message_id, user_id, reaction)
             return
 
         try:
             # avoid duplicate same-reaction by same user
             exists = MessageReaction.query.filter_by(message_id=message_id, user_id=user_id, reaction_type=reaction).first()
             if exists:
-                print('[REACTION] Reaction already exists, ignoring')
-            else:
-                mr = MessageReaction(message_id=message_id, user_id=user_id, reaction_type=reaction)
-                db.session.add(mr)
-                db.session.commit()
-                print(f'[REACTION] Saved reaction id={mr.id}')
+                logger.debug("Reaction already exists for message=%s user=%s reaction=%s - ignoring", message_id, user_id, reaction)
+                return
+
+            mr = MessageReaction(message_id=message_id, user_id=user_id, reaction_type=reaction)
+            db.session.add(mr)
+            db.session.commit()
+            logger.info("Saved reaction for message=%s by user=%s reaction=%s", message_id, user_id, reaction)
 
             # Aggregate reactions for this message
             reactions = MessageReaction.query.filter_by(message_id=message_id).all()
@@ -354,23 +382,26 @@ def register_chat_events(socketio):
                 target_rooms.add(f'user-{msg.sender_id}')
                 target_rooms.add(f'user-{msg.receiver_id}')
             else:
-                # fallback: broadcast
                 target_rooms = None
 
             payload = {
                 'message_id': message_id,
                 'reactions': agg
             }
+
             if target_rooms:
                 for r in target_rooms:
                     try:
                         socketio.emit('message_reaction', payload, room=r)
-                    except Exception as e:
-                        print(f'[REACTION] Error emitting to {r}: {e}')
+                        logger.debug("Emitted message_reaction to room=%s", r)
+                    except Exception:
+                        logger.exception("Error emitting reaction to room %s", r)
             else:
                 socketio.emit('message_reaction', payload, broadcast=True)
-        except Exception as e:
-            print(f'[REACTION] Error saving/emitting reaction: {e}')
+                logger.debug("Broadcasted message_reaction for message=%s", message_id)
+
+        except Exception:
+            logger.exception("Error saving/emitting reaction for message=%s", message_id)
 
     @socketio.on('send_sticker')
     def handle_send_sticker(data):
@@ -439,6 +470,88 @@ def register_chat_events(socketio):
             print(f"[ERROR] ❌ ERROR emitting sticker to {receiver_room}: {e}")
         
         print("[CHAT][GỬI] [STICKER] END - SUCCESS")
+
+    @socketio.on('send_file_message')
+    def handle_send_file_message(data):
+        """Handle file messages that were uploaded to S3.
+        Expected data: { sender_id, receiver_id, file_url, file_name, file_size, file_type, client_message_id }
+        """
+        sender_id = data.get('sender_id')
+        receiver_id = data.get('receiver_id')
+        file_url = data.get('file_url')
+        file_name = data.get('file_name')
+        file_size = data.get('file_size', 0)
+        file_type = data.get('file_type', 'application/octet-stream')
+        client_message_id = data.get('client_message_id')
+
+        logger.debug("[CHAT][RECV] send_file_message sid=%s sender=%s receiver=%s file=%s", 
+                     request.sid, sender_id, receiver_id, file_name)
+
+        if not sender_id or not receiver_id or not file_url or not file_name:
+            logger.warning("Missing required fields for send_file_message: sender=%s receiver=%s file_url=%s file_name=%s", 
+                          sender_id, receiver_id, file_url, file_name)
+            return
+
+        try:
+            # Check block list
+            blocked = Block.query.filter_by(user_id=receiver_id, target_id=sender_id).first()
+            if blocked:
+                logger.info("Sender %s is blocked by receiver %s - rejecting file send", sender_id, receiver_id)
+                if client_message_id:
+                    ack_data = {'client_message_id': client_message_id, 'status': 'blocked'}
+                    socketio.emit('message_sent_ack', ack_data, room=request.sid)
+                return
+
+            # Save file message to DB
+            msg = Message(
+                sender_id=sender_id,
+                receiver_id=receiver_id,
+                content=file_name,
+                message_type='file',
+                file_url=file_url
+            )
+            db.session.add(msg)
+            db.session.commit()
+            logger.info("File message saved to DB: message_id=%s file=%s", msg.id, file_name)
+        except Exception as e:
+            logger.exception("Error saving file message to DB: %s", str(e))
+            db.session.rollback()
+            if client_message_id:
+                ack_data = {'client_message_id': client_message_id, 'status': 'error'}
+                socketio.emit('message_sent_ack', ack_data, room=request.sid)
+            return
+
+        # Prepare message data to broadcast
+        message_data = {
+            'id': msg.id,
+            'sender_id': sender_id,
+            'receiver_id': receiver_id,
+            'content': file_name,
+            'message_type': 'file',
+            'file_url': file_url,
+            'file_name': file_name,
+            'file_size': file_size,
+            'file_type': file_type,
+            'timestamp': msg.timestamp.isoformat(),
+            'status': 'sent',
+        }
+
+        # Send ACK back to sender
+        if client_message_id:
+            ack_data = {'client_message_id': client_message_id, 'message_id': msg.id, 'status': 'sent'}
+            socketio.emit('message_sent_ack', ack_data, room=request.sid)
+            logger.debug("Sent ACK for file message to sender: %s", ack_data)
+
+        # Broadcast to receiver's room
+        receiver_room = f'user-{receiver_id}'
+        logger.debug("Emitting file message to receiver room '%s'", receiver_room)
+        try:
+            socketio.emit('receive_message', message_data, room=receiver_room)
+            logger.info("Emitted file message_id=%s to %s", msg.id, receiver_room)
+        except Exception as e:
+            logger.exception("Error emitting file message to %s: %s", receiver_room, str(e))
+
+        logger.debug("[SEND_FILE_MESSAGE] END - SUCCESS sender=%s receiver=%s message_id=%s", sender_id, receiver_id, msg.id)
 
     @socketio.on('typing')
     def handle_typing(data):
@@ -708,31 +821,12 @@ def register_chat_events(socketio):
     @socketio.on('disconnect')
     def handle_disconnect(data=None):
         print(f"[CHAT][NHẬN] [DISCONNECT] sid={request.sid}")
-        # Remove user_id from mapping on disconnect and set offline
-        disconnected_user_id = None
+        # Remove user_id from mapping on disconnect
         for uid, sid in list(user_sockets.items()):
             if sid == request.sid:
                 del user_sockets[uid]
-                disconnected_user_id = uid
                 print(f"[CHAT][NHẬN] ✅ Removed user_id={uid} from mapping")
-                
-                # Update user status to offline in database
-                try:
-                    user = User.query.get(int(uid))
-                    if user:
-                        user.status = 'offline'
-                        db.session.commit()
-                        print(f"[CHAT][NHẬN] ✅ Updated user {uid} status to 'offline'")
-                except Exception as e:
-                    print(f"[CHAT][NHẬN] ⚠️  Error updating user status: {e}")
-                    db.session.rollback()
                 break
-        
-        # Broadcast offline status to all connected users
-        if disconnected_user_id:
-            socketio.emit('user_status_changed', {'user_id': disconnected_user_id, 'status': 'offline'}, broadcast=True)
-            print(f"[CHAT][GỬI] ✅ Broadcasted user {disconnected_user_id} offline status")
-        
-        # Legacy offline event for backward compatibility
+        # Use emit (not socketio.emit) with broadcast=True to broadcast to all
         emit('user_offline', {'sid': request.sid}, broadcast=True)
         print("[CHAT][GỬI] [DISCONNECT] END")

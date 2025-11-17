@@ -90,7 +90,8 @@ const StickerButton = ({ onSelectSticker, onAddEmoji }) => {
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
       <button 
-        onClick={() => setOpen((v) => !v)} 
+        type="button"
+        onClick={(e) => { e.preventDefault(); setOpen((v) => !v); }} 
         title="Gửi sticker hoặc emoji" 
         // Dùng hằng số EMOJI_BUTTON_FONT_SIZE ở trên để dễ thay đổi
         style={{ fontSize: EMOJI_BUTTON_FONT_SIZE, lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
@@ -284,7 +285,15 @@ const StickerButton = ({ onSelectSticker, onAddEmoji }) => {
                         transition: 'transform 0.2s, border 0.2s',
                         border: selectedSticker?.id === sticker.id ? '3px solid #0b5ed7' : '2px solid transparent',
                       }}
-                      onClick={() => handleStickerSelect(sticker)}
+                      // Send sticker immediately when clicked (optimistic send handled by ChatBox)
+                      onClick={() => {
+                        if (onSelectSticker) {
+                          onSelectSticker(sticker);
+                        } else {
+                          handleStickerSelect(sticker);
+                        }
+                        setOpen(false);
+                      }}
                       onMouseEnter={(e) => {
                         e.target.style.transform = 'scale(1.1)';
                       }}
@@ -308,17 +317,21 @@ const StickerButton = ({ onSelectSticker, onAddEmoji }) => {
                       gridTemplateColumns: 'repeat(8, 1fr)',
                       gap: 4,
                     }}>
-                      {group.emojis.map((emoji) => (
+                      {group.emojis.filter(Boolean).map((emoji) => (
                         <button
                           key={emoji}
+                          type="button"
                           onClick={(e) => {
+                            // Prevent any default (e.g. form submit) so click only inserts
+                            e.preventDefault();
                             // If user holds Shift while clicking, send immediately
                             const sendNow = e.shiftKey === true;
                             onAddEmoji(emoji, sendNow);
                             // close only when not just inserting
                             if (sendNow) setOpen(false);
                           }}
-                          onDoubleClick={() => {
+                          onDoubleClick={(e) => {
+                            e.preventDefault();
                             // double-click = send immediately
                             onAddEmoji(emoji, true);
                             setOpen(false);

@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { initializeSocket, sendMessage, onReceiveMessage, joinUserRoom, sendReaction, onReaction, sendTyping, onTyping, onMessageSentAck, sendSticker, requestContactsList, onCommandResponse, sendFriendRequest, onFriendRequestReceived, sendFriendAccept, sendFriendReject, onFriendAccepted, onFriendRejected, sendBlockUser, sendUnblockUser, onUserBlocked, requestContactsSync, onContactUpdated, onUserStatusChanged } from '../../services/socket';
+import { initializeSocket, getSocket, sendMessage, onReceiveMessage, joinUserRoom, sendReaction, onReaction, sendTyping, onTyping, onMessageSentAck, sendSticker, requestContactsList, onCommandResponse, sendFriendRequest, onFriendRequestReceived, sendFriendAccept, sendFriendReject, onFriendAccepted, onFriendRejected, sendBlockUser, sendUnblockUser, onUserBlocked, requestContactsSync, onContactUpdated } from '../../services/socket';
+import { showToast, showSystemNotification, playSound } from '../../services/notifications';
 import { userAPI, messageAPI, groupAPI } from '../../services/api';
+import { uploadFile } from '../../services/upload';
 import MessageBubble from './MessageBubble';
 import StickerButton from './StickerButton';
 import TypingIndicator from './TypingIndicator';
@@ -79,6 +81,8 @@ const ChatBox = () => {
   // Ref để scroll xuống cuối chat
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const inputRef = useRef(null);
+  const isDev = process.env.NODE_ENV === 'development';
 
   // Gửi sticker trực tiếp
   const handleSendSticker = (sticker) => {
@@ -94,15 +98,31 @@ const ChatBox = () => {
         id: clientMessageId,
         sender_id: currentUserId,
         receiver_id: selectedUser.id,
-        message_type: 'sticker',
         sticker_id: sticker.id,
+        message_type: 'sticker',
         sticker_url: sticker.url,
         timestamp: new Date().toISOString(),
         isSent: true,
         status: 'sending',
       },
     ]);
+    // Update conversation preview immediately
+    updateConversationPreview({ sender_id: currentUserId, receiver_id: selectedUser.id, message_type: 'sticker', sticker_url: sticker.url });
+    try { playSound('send'); } catch (e) {}
+    // restore focus after sticker send
+    setTimeout(() => {
+      try {
+        const el = inputRef.current;
+        if (el) {
+          el.focus();
+          const len = el.value?.length || 0;
+          try { el.setSelectionRange(len, len); } catch (e) {}
+        }
+      } catch (e) {}
+    }, 50);
   };
+
+  // (Stickers are sent immediately via handleSendSticker; emoji are inserted into input)
 
   // Prepare a sticker to be sent when the user hits send/enter (don't send immediately)
   // (stickers are sent immediately via handleSendSticker)
@@ -112,7 +132,16 @@ const ChatBox = () => {
     if (!sendNow) {
       setMessageText((prev) => prev + emoji);
       // Auto-focus input để user có thể continue typing hoặc gửi
-      document.querySelector('.message-input')?.focus();
+      setTimeout(() => {
+        try {
+          const el = inputRef.current;
+          if (el) {
+            el.focus();
+            const len = el.value?.length || 0;
+            try { el.setSelectionRange(len, len); } catch (e) {}
+          }
+        } catch (e) {}
+      }, 20);
       return;
     }
 
@@ -120,6 +149,13 @@ const ChatBox = () => {
     if (!selectedUser || !currentUserId) return;
     const clientMessageId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     setIsSending(true);
+
+    // Debug: log outgoing emoji payload so we can track emoji persistence issues
+    try {
+      if (process.env.NODE_ENV === 'development') console.debug('[CLIENT][SEND_EMOJI_NOW] payload', { sender_id: currentUserId, receiver_id: selectedUser.id, content: emoji });
+    } catch (e) {
+      console.error('Debug logging failed', e);
+    }
 
     sendMessage(currentUserId, selectedUser.id, emoji, {
       client_message_id: clientMessageId,
@@ -137,9 +173,25 @@ const ChatBox = () => {
     };
 
     setMessages((prev) => [...prev, newMessage]);
+    // Update conversation preview immediately so left list reflects the new message
+    updateConversationPreview(newMessage);
     setReplyTo(null);
     // Stop typing indicator when sending
     sendTyping(currentUserId, selectedUser.id, false);
+
+    try { playSound('send'); } catch (e) {}
+
+  // restore focus to input after sending
+  setTimeout(() => {
+    try {
+      const el = inputRef.current;
+      if (el) {
+        el.focus();
+        const len = el.value?.length || 0;
+        try { el.setSelectionRange(len, len); } catch (e) {}
+      }
+    } catch (e) {}
+  }, 50);
 
     const ackTimeout = setTimeout(() => {
       setMessages((prev) =>
@@ -161,6 +213,73 @@ const ChatBox = () => {
       localStorage.setItem('selectedUser', JSON.stringify(user));
     } else {
       localStorage.removeItem('selectedUser');
+    }
+  };
+
+  // Update conversation preview in the left list when a message is sent or received
+  const updateConversationPreview = (msg) => {
+    try {
+      if (isDev) console.debug('[updateConversationPreview] called with', msg, 'selectedUser', selectedUser);
+      if (!msg) return;
+      // determine peer id (the other participant)
+      let peerId = null;
+      if (msg.sender_id != null && String(msg.sender_id) === String(currentUserId)) {
+        peerId = msg.receiver_id;
+      } else {
+        peerId = msg.sender_id;
+      }
+
+      // If peerId is missing or literally 'undefined'/'null', try selectedUser fallback
+      if (!peerId || String(peerId).trim() === '' || String(peerId).toLowerCase() === 'undefined' || String(peerId).toLowerCase() === 'null') {
+        if (selectedUser && selectedUser.id) peerId = selectedUser.id;
+      }
+
+      // If still no valid peerId, bail out (do not create an 'undefined' conversation)
+      if (!peerId) return;
+
+      // build a friendly preview string
+      const previewText = msg.message_type === 'sticker'
+        ? 'Sticker'
+        : (msg.content || msg.sticker_url || msg.file_name || 'Tin nhắn mới');
+
+      setUsers((prev) => {
+        if (isDev) console.debug('[updateConversationPreview] users before', prev);
+        // find existing conversation entry by id (string/number tolerant)
+        const idx = prev.findIndex((u) => String(u.id) === String(peerId));
+        // Derive username/display_name with fallbacks. Prefer selectedUser when it matches peerId.
+        const derivedFromSelected = (selectedUser && String(selectedUser.id) === String(peerId));
+        let username = msg.username || msg.sender_username || msg.sender_name || (derivedFromSelected ? selectedUser.username : null);
+        let displayName = msg.display_name || msg.sender_name || msg.sender_username || (derivedFromSelected ? selectedUser.display_name || selectedUser.username : null);
+
+        // Guard against string 'undefined' or other bad values
+        if (typeof username === 'string' && username.trim().toLowerCase() === 'undefined') username = null;
+        if (typeof displayName === 'string' && displayName.trim().toLowerCase() === 'undefined') displayName = null;
+
+        const finalDisplay = displayName || username || `Người dùng ${peerId}`;
+
+        let result;
+        if (idx !== -1) {
+          const existing = prev[idx];
+          const updated = { ...existing, last_message: previewText, display_name: existing.display_name || finalDisplay, username: existing.username || username };
+          // move to top
+          const others = prev.filter((_, i) => i !== idx);
+          result = [updated, ...others];
+        } else {
+          // not found -> create a lightweight conversation entry and put on top
+          const newEntry = {
+            id: peerId,
+            username: username || null,
+            display_name: finalDisplay,
+            last_message: previewText,
+            is_group: false,
+          };
+          result = [newEntry, ...prev];
+        }
+        if (isDev) console.debug('[updateConversationPreview] users after', result);
+        return result;
+      });
+    } catch (e) {
+      if (isDev) console.debug('updateConversationPreview error', e);
     }
   };
 
@@ -206,17 +325,24 @@ const ChatBox = () => {
     if (!currentUserId) return;
     
     onReceiveMessage((data) => {
-      console.log('[CHAT] Received message:', data);
+      if (isDev) console.debug('[CHAT] Received message:', data);
       const isSent = data.sender_id === currentUserId;
       setMessages((prev) => {
         // If message with same id already exists, ignore
         if (prev.some((m) => m.id === data.id)) return prev;
 
-        // If there is an optimistic message (sent by current user) with same content,
-        // replace it with the server-saved message (to normalize id/timestamp).
-        const optimisticIndex = prev.findIndex(
-          (m) => m.isSent && m.content === data.content
-        );
+        // Try to find an optimistic message to replace.
+        // For text messages we previously matched by content; for stickers match by sticker_id or sticker_url.
+        const optimisticIndex = prev.findIndex((m) => {
+          if (!m.isSent) return false;
+          // exact content match for text/emoji
+          if (m.content && data.content && m.content === data.content) return true;
+          // sticker match by sticker_id or sticker_url
+          if (data.message_type === 'sticker' && (m.sticker_id && data.sticker_id && String(m.sticker_id) === String(data.sticker_id))) return true;
+          if (data.message_type === 'sticker' && (m.sticker_url && data.sticker_url && m.sticker_url === data.sticker_url)) return true;
+          return false;
+        });
+
         if (optimisticIndex !== -1) {
           const copy = [...prev];
           copy[optimisticIndex] = { ...data, isSent };
@@ -225,11 +351,36 @@ const ChatBox = () => {
 
         return [...prev, { ...data, isSent }];
       });
+      // Update conversation preview when a message is received
+      updateConversationPreview(data);
+      try {
+        // If message is from someone else and not currently selected, show notification
+        if (!isSent) {
+          const senderLabel = data.sender_username || data.sender_name || `Người dùng ${data.sender_id}`;
+          const content = typeof data.content === 'string' ? data.content : (data.message_type === 'sticker' ? 'Sticker' : 'Tin nhắn mới');
+          // In-app toast
+          showToast('Tin nhắn mới', `${senderLabel}: ${content}`, {
+            category: 'message',
+            payload: { sender_id: data.sender_id, sender_username: data.sender_username || data.sender_name },
+            onClick: (payload) => {
+              try {
+                handleSelectUser({ id: payload.sender_id, username: payload.sender_username });
+              } catch (e) {}
+            }
+          });
+          // System notification when the conversation isn't open
+          if (!selectedUser || String(selectedUser.id) !== String(data.sender_id)) {
+            showSystemNotification(senderLabel, content);
+          }
+        }
+      } catch (e) {
+        console.error('Notification error for incoming message', e);
+      }
     });
 
     // Setup ACK listener for message_sent_ack
     onMessageSentAck((ack) => {
-      console.log('[ACK] Message saved by server:', ack);
+      if (isDev) console.debug('[ACK] Message saved by server:', ack);
       const { client_message_id, message_id, status } = ack;
       
       // Clear timeout and update message status
@@ -243,6 +394,12 @@ const ChatBox = () => {
           return m;
         })
       );
+      // Update conversation preview on ACK (best-effort) only when we have a selectedUser
+      try {
+        if (selectedUser && selectedUser.id) {
+          updateConversationPreview({ sender_id: currentUserId, receiver_id: selectedUser.id, message_type: 'text' });
+        }
+      } catch (e) {}
       setIsSending(false);
       // release press-hold scale if any
       keepScaledRef.current = false;
@@ -251,7 +408,7 @@ const ChatBox = () => {
 
     // Setup reaction listener
     onReaction((data) => {
-      console.log('[REACTION]', data);
+      if (isDev) console.debug('[REACTION]', data);
         setReactions((prev) => {
           const msgId = data.message_id;
           const existing = prev[msgId] || [];
@@ -270,7 +427,7 @@ const ChatBox = () => {
 
     // Setup typing listener
     onTyping((data) => {
-      console.log('[TYPING]', data);
+      if (isDev) console.debug('[TYPING]', data);
       setRemotePeerIsTyping(data.is_typing);
     });
 
@@ -286,8 +443,10 @@ const ChatBox = () => {
           const newReq = { rel_id: `fr_${Date.now()}_${fromId}`, user_id: fromId, username: `User ${fromId}` };
           return [newReq, ...prev];
         });
-        // Simple user-visible notification
-        alert('Bạn có lời mời kết bạn mới!');
+        // In-app + system notification for friend request
+        const fromLabel = payload?.from_username || payload?.from_user_name || `Người dùng ${fromId}`;
+        showToast('Lời mời kết bạn', `${fromLabel} đã gửi lời mời kết bạn`);
+        showSystemNotification('Lời mời kết bạn', `${fromLabel} đã gửi lời mời kết bạn`);
       } catch (e) {
         console.error('Error handling friend_request_received:', e);
       }
@@ -298,7 +457,8 @@ const ChatBox = () => {
       try {
         // payload: { event: 'FRIEND_ACCEPTED', user_id: '123' }
         const accepterId = payload?.user_id;
-        alert(`Lời mời của bạn đã được chấp nhận bởi người dùng ${accepterId}`);
+        showToast('Lời mời được chấp nhận', `Người dùng ${accepterId} đã chấp nhận lời mời của bạn`);
+        showSystemNotification('Lời mời được chấp nhận', `Người dùng ${accepterId} đã chấp nhận lời mời của bạn`);
         // refresh friends list if on contacts tab
         if (filterTab === 'contacts') {
           const token = localStorage.getItem('token');
@@ -313,7 +473,8 @@ const ChatBox = () => {
     onFriendRejected((payload) => {
       try {
         const rejectorId = payload?.user_id;
-        alert(`Lời mời của bạn đã bị từ chối bởi người dùng ${rejectorId}`);
+        showToast('Lời mời bị từ chối', `Người dùng ${rejectorId} đã từ chối lời mời của bạn`);
+        showSystemNotification('Lời mời bị từ chối', `Người dùng ${rejectorId} đã từ chối lời mời của bạn`);
       } catch (e) {
         console.error('Error handling friend rejected:', e);
       }
@@ -341,7 +502,8 @@ const ChatBox = () => {
         if (resp.action === 'FRIEND_REQUEST_SENT') {
           if (resp.status === 'SUCCESS') {
             // optionally refresh suggestions and notify user
-            alert('Lời mời kết bạn đã gửi');
+            showToast('Gửi lời mời', 'Lời mời kết bạn đã được gửi');
+            showSystemNotification('Gửi lời mời', 'Lời mời kết bạn đã được gửi');
             (async () => {
               try {
                 const sugg = await userAPI.getSuggestions(6);
@@ -355,22 +517,27 @@ const ChatBox = () => {
               }
             })();
           } else {
-            alert('Gửi lời mời thất bại: ' + (resp.error || ''));
+            showToast('Gửi lời mời thất bại', resp.error || 'Gửi lời mời thất bại');
+            showSystemNotification('Gửi lời mời thất bại', resp.error || 'Gửi lời mời thất bại');
           }
         }
         if (resp.action === 'BLOCK_USER') {
           if (resp.status === 'SUCCESS') {
-            alert('Chặn thành công');
+            showToast('Chặn', 'Chặn thành công');
+            showSystemNotification('Chặn', 'Chặn thành công');
           } else {
-            alert('Chặn thất bại: ' + (resp.error || ''));
+            showToast('Chặn thất bại', resp.error || 'Chặn thất bại');
+            showSystemNotification('Chặn thất bại', resp.error || 'Chặn thất bại');
           }
         }
 
         if (resp.action === 'UNBLOCK_USER') {
           if (resp.status === 'SUCCESS') {
-            alert('Bỏ chặn thành công');
+            showToast('Bỏ chặn', 'Bỏ chặn thành công');
+            showSystemNotification('Bỏ chặn', 'Bỏ chặn thành công');
           } else {
-            alert('Bỏ chặn thất bại: ' + (resp.error || ''));
+            showToast('Bỏ chặn thất bại', resp.error || 'Bỏ chặn thất bại');
+            showSystemNotification('Bỏ chặn thất bại', resp.error || 'Bỏ chặn thất bại');
           }
         }
 
@@ -378,9 +545,11 @@ const ChatBox = () => {
           if (resp.status === 'SUCCESS') {
             // server returns 'friends' array
             const friends = resp.friends || resp.data || [];
-            alert(`Đồng bộ xong - tìm thấy ${friends.length} bạn trên ChatApp`);
+            showToast('Đồng bộ danh bạ', `Đồng bộ xong - tìm thấy ${friends.length} bạn trên ChatApp`);
+            showSystemNotification('Đồng bộ danh bạ', `Đồng bộ xong - tìm thấy ${friends.length} bạn trên ChatApp`);
           } else {
-            alert('Đồng bộ danh bạ thất bại: ' + (resp.error || ''));
+            showToast('Đồng bộ danh bạ thất bại', resp.error || 'Đồng bộ danh bạ thất bại');
+            showSystemNotification('Đồng bộ danh bạ thất bại', resp.error || 'Đồng bộ danh bạ thất bại');
           }
         }
       } catch (e) {
@@ -392,7 +561,8 @@ const ChatBox = () => {
     onUserBlocked((payload) => {
       try {
         const by = payload?.by_user;
-        alert(`Người dùng ${by} đã chặn bạn`);
+        showToast('Bị chặn', `Người dùng ${by} đã chặn bạn`);
+        showSystemNotification('Bị chặn', `Người dùng ${by} đã chặn bạn`);
       } catch (e) {
         console.error('Error handling user_blocked:', e);
       }
@@ -402,42 +572,35 @@ const ChatBox = () => {
     onContactUpdated((payload) => {
       try {
         // payload: { event: 'CONTACT_UPDATED', data: [...] }
-        console.log('Contact updated payload', payload);
-        alert('Danh bạ được cập nhật từ server');
+        if (isDev) console.debug('Contact updated payload', payload);
+        showToast('Danh bạ', 'Danh bạ được cập nhật từ server');
+        showSystemNotification('Danh bạ', 'Danh bạ được cập nhật từ server');
       } catch (e) {
         console.error('Error handling contact_updated:', e);
       }
     });
 
-    // Listen for user status changes (online/offline)
-    onUserStatusChanged((data) => {
-      try {
-        // data: { user_id: '123', status: 'online' | 'offline' }
-        const changedUserId = data?.user_id;
-        const newStatus = data?.status;
-        console.log(`[STATUS_CHANGE] User ${changedUserId} is now ${newStatus}`);
-        
-        // Update users list with new status
-        setUsers((prev) => {
-          return prev.map((user) => {
-            if (String(user.id) === String(changedUserId)) {
-              return { ...user, status: newStatus };
-            }
-            return user;
-          });
-        });
-        
-        // If the selected user's status changed, update it too
-        if (selectedUser && String(selectedUser.id) === String(changedUserId)) {
-          setSelectedUser((prev) => {
-            if (prev) return { ...prev, status: newStatus };
-            return prev;
-          });
-        }
-      } catch (e) {
-        console.error('Error handling user_status_changed:', e);
-      }
-    });
+    // Listen for group update/create events if server emits them
+    try {
+      const sock = getSocket();
+      sock.off('group_updated');
+      sock.on('group_updated', (payload) => {
+        if (isDev) console.debug('[GROUP_UPDATED]', payload);
+        const name = payload?.group_name || payload?.name || 'Nhóm';
+        showToast('Cập nhật nhóm', `${name} đã được cập nhật`);
+        showSystemNotification('Cập nhật nhóm', `${name} đã được cập nhật`);
+      });
+
+      sock.off('group_created');
+      sock.on('group_created', (payload) => {
+        if (isDev) console.debug('[GROUP_CREATED]', payload);
+        const name = payload?.group_name || payload?.name || 'Nhóm mới';
+        showToast('Nhóm mới', `${name} đã được tạo`);
+        showSystemNotification('Nhóm mới', `${name} đã được tạo`);
+      });
+    } catch (e) {
+      if (isDev) console.debug('Socket group listeners could not be attached', e);
+    }
   }, [currentUserId]);
 
   // Auto-scroll xuống cuối khi có tin nhắn mới
@@ -617,6 +780,14 @@ const ChatBox = () => {
     }
   }, [selectedUser, currentUserId]);
 
+  // Auto-focus the input whenever we select a user (small timeout to allow render)
+  useEffect(() => {
+    if (selectedUser) {
+      // slight delay ensures the input is mounted and visible
+      setTimeout(() => inputRef.current?.focus(), 80);
+    }
+  }, [selectedUser]);
+
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!messageText.trim() || !selectedUser) return;
@@ -624,6 +795,24 @@ const ChatBox = () => {
     // Create unique client message id for ACK tracking
     const clientMessageId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     setIsSending(true);
+
+    // Emit a single "typing" event to signal the send action (so server
+    // sees a typing event only when the user actually sends — this
+    // prevents noisy per-keystroke typing logs).
+    if (selectedUser && currentUserId) {
+      try {
+        sendTyping(currentUserId, selectedUser.id, true);
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    // Debug: log outgoing payload so we can confirm emoji-only content is sent as expected
+    try {
+      if (process.env.NODE_ENV === 'development') console.debug('[CLIENT][SEND_MESSAGE] payload', { sender_id: currentUserId, receiver_id: selectedUser.id, content: messageText });
+    } catch (e) {
+      console.error('Debug logging failed', e);
+    }
 
     // Gửi qua Socket.IO (với hỗ trợ reply_to)
     sendMessage(currentUserId, selectedUser.id, messageText, {
@@ -642,7 +831,23 @@ const ChatBox = () => {
       reply_to_id: replyTo?.id || null,
     };
     setMessages((prev) => [...prev, newMessage]);
+    // Update conversation preview immediately so the conversation list shows the sent message
+    updateConversationPreview(newMessage);
+    try {
+      playSound('send');
+    } catch (e) {}
     setMessageText('');
+    // restore focus to input after sending so user can continue typing
+    setTimeout(() => {
+      try {
+        const el = inputRef.current;
+        if (el) {
+          el.focus();
+          const len = el.value?.length || 0;
+          try { el.setSelectionRange(len, len); } catch (e) {}
+        }
+      } catch (e) {}
+    }, 50);
     setReplyTo(null);  // Reset reply state
 
     // Signal pickers (sticker/emoji) to close
@@ -672,15 +877,11 @@ const ChatBox = () => {
     );
   };
 
-  // Handle input change and send typing indicator
+  // Handle input change (typing indicator is NOT emitted per-keystroke to
+  // reduce noisy logs). We emit typing on actual send (Enter/Send).
   const handleInputChange = (e) => {
     const value = e.target.value;
     setMessageText(value);
-    
-    // Send typing indicator only if selectedUser exists
-    if (selectedUser && currentUserId) {
-      sendTyping(currentUserId, selectedUser.id, value.length > 0);
-    }
   };
 
   // Open another user's public profile modal
@@ -691,45 +892,110 @@ const ChatBox = () => {
       setOtherProfileOpen(true);
     } catch (err) {
       console.error('Lỗi tải profile người dùng:', err);
-      alert('Không thể tải thông tin người dùng');
+      const msg = 'Không thể tải thông tin người dùng';
+      showToast('Lỗi', msg);
+      showSystemNotification('Lỗi', msg);
     }
   };
 
-  // Handle file upload
+  // Handle file upload with S3 presigned URL flow
+  // Flow: Chọn file → presigned URL → upload S3 → tạo message local → emit socket → server lưu DB → broadcast → hiển thị preview
   const handleFileUpload = async (e) => {
     const files = e.target.files;
-    if (!files || files.length === 0 || !selectedUser || !currentUserId) return;
+    if (!files || files.length === 0) return;
+    
+    if (!selectedUser || !currentUserId) {
+      const msg = 'Vui lòng chọn người nhận trước khi gửi file';
+      showToast('Upload file', msg);
+      showSystemNotification('Upload file', msg);
+      return;
+    }
 
     for (let file of files) {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('sender_id', currentUserId);
-      formData.append('receiver_id', selectedUser.id);
+      // Validate file size (max 50MB)
+      const MAX_SIZE = 50 * 1024 * 1024;
+      if (file.size > MAX_SIZE) {
+        const msg = `File "${file.name}" quá lớn! Kích thước tối đa là 50MB`;
+        showToast('Upload file', msg);
+        showSystemNotification('Upload file', msg);
+        continue;
+      }
 
       try {
         setIsSending(true);
-        console.log('Uploading file:', file.name, 'to user:', selectedUser.id);
-        const response = await messageAPI.sendFile(formData);
+        if (isDev) console.debug('[FILE_UPLOAD] Starting upload for:', file.name);
+
+        // Upload file through backend using upload service
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const { file_url, file_name, file_size, file_type } = await uploadFile(file, token);
         
-        console.log('Upload response:', response.data);
-        
-        // Add file message to chat
+        if (isDev) console.debug('[FILE_UPLOAD] File uploaded successfully:', file_url);
+
+        // Create local optimistic message (hiển thị ngay trên UI)
+        const clientMessageId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const fileMessage = {
-          id: response.data.id,
-          content: response.data.content,
-          file_url: response.data.file_url,
-          timestamp: response.data.timestamp,
+          id: clientMessageId,
+          content: file_name,
+          message_type: 'file',
+          file_url: file_url,
+          file_name: file_name,
+          file_size: file_size,
+          file_type: file_type,
+          timestamp: new Date().toISOString(),
           isSent: true,
           sender_id: currentUserId,
-          status: 'sent',
+          receiver_id: selectedUser.id,
+          status: 'sending',
         };
         
+        // Add to UI immediately (optimistic update)
         setMessages((prev) => [...prev, fileMessage]);
-        console.log('File message added to chat');
+        if (isDev) console.debug('[FILE_UPLOAD] Added optimistic message to UI');
+  // Update conversation preview immediately for file sends
+  updateConversationPreview(fileMessage);
+        // keep input focused after file send
+        setTimeout(() => {
+          try {
+            const el = inputRef.current;
+            if (el) {
+              el.focus();
+              const len = el.value?.length || 0;
+              try { el.setSelectionRange(len, len); } catch (e) {}
+            }
+          } catch (e) {}
+        }, 50);
+
+        // Emit socket event to server (server lưu DB và broadcast)
+        const socket = getSocket();
+        socket.emit('send_file_message', {
+          sender_id: currentUserId,
+          receiver_id: selectedUser.id,
+          file_url: file_url,
+          file_name: file_name,
+          file_size: file_size,
+          file_type: file_type,
+          client_message_id: clientMessageId,
+        });
+
+        if (isDev) console.debug('[FILE_UPLOAD] Emitted send_file_message via socket');
+
+        // Set timeout for ACK (nếu không nhận được ACK trong 5s -> đánh dấu failed)
+        const ackTimeout = setTimeout(() => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === clientMessageId ? { ...m, status: 'failed' } : m))
+          );
+          setIsSending(false);
+        }, 5000);
+
+        setMessages((prev) =>
+          prev.map((m) => (m.id === clientMessageId ? { ...m, _ackTimeout: ackTimeout } : m))
+        );
+        
       } catch (err) {
-        console.error('Lỗi gửi file:', err.response?.data || err.message);
-        alert(`Lỗi gửi file: ${file.name}\n${err.response?.data?.error || err.message}`);
-      } finally {
+        console.error('[FILE_UPLOAD] Error:', err);
+        const msg = `Lỗi gửi file: ${file.name}\n${err.response?.data?.error || err.message}`;
+        showToast('Lỗi gửi file', msg);
+        showSystemNotification('Lỗi gửi file', msg);
         setIsSending(false);
       }
     }
@@ -756,6 +1022,9 @@ const ChatBox = () => {
       _ackTimeout: null,
     } : m)));
 
+    // Update conversation preview for the retried message
+    updateConversationPreview({ sender_id: currentUserId, receiver_id: selectedUser.id, content: failedMessage.content || failedMessage.sticker_url || failedMessage.file_name });
+
     // Emit via socket
     sendMessage(currentUserId, selectedUser.id, failedMessage.content || failedMessage.sticker_url || '', {
       client_message_id: clientMessageId,
@@ -769,6 +1038,17 @@ const ChatBox = () => {
 
     // Attach timeout id to the optimistic message so ACK handler can clear it
     setMessages((prev) => prev.map((m) => (m.id === clientMessageId ? { ...m, _ackTimeout: ackTimeout } : m)));
+    // restore focus after retry
+    setTimeout(() => {
+      try {
+        const el = inputRef.current;
+        if (el) {
+          el.focus();
+          const len = el.value?.length || 0;
+          try { el.setSelectionRange(len, len); } catch (e) {}
+        }
+      } catch (e) {}
+    }, 50);
   };
 
   return (
@@ -806,7 +1086,8 @@ const ChatBox = () => {
               try {
                 const token = localStorage.getItem('token');
                 if (!token) {
-                  alert('Cần đăng nhập để đồng bộ danh bạ');
+                  showToast('Đồng bộ danh bạ', 'Cần đăng nhập để đồng bộ danh bạ');
+                  showSystemNotification('Đồng bộ danh bạ', 'Cần đăng nhập để đồng bộ danh bạ');
                   return;
                 }
                 // Example: pull contacts from localStorage or prompt for a few numbers for demo
@@ -814,7 +1095,8 @@ const ChatBox = () => {
                 if (!raw) return;
                 const arr = raw.split(',').map(s => s.trim()).filter(Boolean);
                 requestContactsSync(arr, token);
-                alert('Đã gửi yêu cầu đồng bộ danh bạ');
+                showToast('Đồng bộ danh bạ', 'Đã gửi yêu cầu đồng bộ danh bạ');
+                showSystemNotification('Đồng bộ danh bạ', 'Đã gửi yêu cầu đồng bộ danh bạ');
               } catch (e) {
                 console.error('Contact sync error', e);
               }
@@ -825,7 +1107,8 @@ const ChatBox = () => {
             title="Cloud của tôi"
             onClick={() => {
               // quick action: open uploads folder in a new tab (not implemented server-side)
-              alert('Mở Cloud (chưa triển khai)');
+              showToast('Cloud', 'Mở Cloud (chưa triển khai)');
+              showSystemNotification('Cloud', 'Mở Cloud (chưa triển khai)');
             }}
           >☁️</button>
           <button
@@ -844,10 +1127,12 @@ const ChatBox = () => {
                 // update users list to reflect change
                 const all = await userAPI.getUsers();
                 setUsers(all.data || []);
-                alert('Đã cập nhật tên hiển thị');
+                showToast('Cập nhật', 'Đã cập nhật tên hiển thị');
+                showSystemNotification('Cập nhật', 'Đã cập nhật tên hiển thị');
               } catch (err) {
                 console.error('Lỗi cập nhật tên:', err);
-                alert('Cập nhật thất bại');
+                showToast('Cập nhật thất bại', 'Cập nhật thất bại');
+                showSystemNotification('Cập nhật thất bại', 'Cập nhật thất bại');
               }
             }}
           >⚙️</button>
@@ -1007,10 +1292,14 @@ const ChatBox = () => {
                                   });
                                   
                                   // show success message
-                                  alert(`✅ Đã kết bạn với ${r.username}`);
+                                  const okMsg = `✅ Đã kết bạn với ${r.username}`;
+                                  showToast('Bạn bè', okMsg);
+                                  showSystemNotification('Bạn bè', okMsg);
                                 } catch (err) {
                                   console.error('Lỗi chấp nhận:', err);
-                                  alert('Lỗi khi chấp nhận lời mời');
+                                  const msg = 'Lỗi khi chấp nhận lời mời';
+                                  showToast('Lỗi', msg);
+                                  showSystemNotification('Lỗi', msg);
                                 }
                               })();
                             }}
@@ -1135,7 +1424,7 @@ const ChatBox = () => {
               onClick={() => handleSelectUser(user)}
               style={{position:'relative'}}
             >
-              <div className="conv-avatar" onClick={(e) => { e.stopPropagation(); openUserProfile(user.id); }} style={{cursor:'pointer'}}>{user.username[0]?.toUpperCase()}</div>
+              <div className="conv-avatar" onClick={(e) => { e.stopPropagation(); openUserProfile(user.id); }} style={{cursor:'pointer'}}>{((user?.username || user?.display_name || 'U')[0] || 'U').toUpperCase()}</div>
               <div className="conv-body">
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
                   <div className="conv-title" onClick={(e) => { e.stopPropagation(); if (!user.is_group) openUserProfile(user.id); }} style={{cursor: user.is_group ? 'default' : 'pointer'}}>{user.display_name || user.username}</div>
@@ -1152,26 +1441,48 @@ const ChatBox = () => {
                               try {
                                 const token = localStorage.getItem('token');
                                 if (token) {
-                                  // Send unblock or delete friend command via socket if available
-                                  // For now, call REST endpoint to remove friend
-                                  // Note: You may need to implement a removeFriend/unfriend endpoint in the backend
                                   const resp = await fetch(`/friends/${user.id}/remove`, {
                                     method: 'DELETE',
-                                    headers: { 'Authorization': `Bearer ${token}` }
+                                    headers: { 
+                                      'Authorization': `Bearer ${token}`,
+                                      'Content-Type': 'application/json'
+                                    }
                                   });
-                                  if (resp.ok) {
+                                    if (resp.ok) {
                                     // Remove from users list
                                     setUsers(prev => prev.filter(u => u.id !== user.id));
-                                    alert(`✅ Đã hủy kết bạn với ${user.display_name || user.username}`);
+                                    
+                                    // Add to suggestions if not already there
+                                    setSuggestions(prev => {
+                                      const alreadyExists = prev.some(s => s.id === user.id);
+                                      if (alreadyExists) return prev;
+                                      return [user, ...prev];
+                                    });
+                                    
+                                    // Clear selected user if they were selected
+                                    if (selectedUser?.id === user.id) {
+                                      handleSelectUser(null);
+                                    }
+                                    
+                                    const okMsg = `✅ Đã hủy kết bạn với ${user.display_name || user.username}`;
+                                    showToast('Bạn bè', okMsg);
+                                    showSystemNotification('Bạn bè', okMsg);
                                   } else {
-                                    alert('Lỗi khi hủy kết bạn');
+                                    const errData = await resp.json().catch(() => ({}));
+                                    const errMsg = errData.error || errData.message || 'Lỗi khi hủy kết bạn';
+                                    console.error('Remove friend error:', resp.status, errMsg);
+                                    showToast('Lỗi', errMsg);
+                                    showSystemNotification('Lỗi', errMsg);
                                   }
                                 } else {
-                                  alert('Chưa đăng nhập');
+                                  showToast('Yêu cầu đăng nhập', 'Chưa đăng nhập');
+                                  showSystemNotification('Yêu cầu đăng nhập', 'Chưa đăng nhập');
                                 }
-                              } catch (err) {
+                                } catch (err) {
                                 console.error('Lỗi hủy kết bạn:', err);
-                                alert('Lỗi khi hủy kết bạn');
+                                const msg = `Lỗi khi hủy kết bạn: ${err.message}`;
+                                showToast('Lỗi', msg);
+                                showSystemNotification('Lỗi', msg);
                               }
                               setConfirmDialog({ open: false, title: '', onConfirm: null });
                             }
@@ -1211,7 +1522,7 @@ const ChatBox = () => {
                   onClick={() => handleSelectUser(user)}
                   style={{position:'relative'}}
                 >
-                  <div className="conv-avatar" onClick={(e) => { e.stopPropagation(); openUserProfile(user.id); }} style={{cursor:'pointer'}}>{user.username[0]?.toUpperCase()}</div>
+                  <div className="conv-avatar" onClick={(e) => { e.stopPropagation(); openUserProfile(user.id); }} style={{cursor:'pointer'}}>{((user?.username || user?.display_name || 'U')[0] || 'U').toUpperCase()}</div>
                   <div className="conv-body">
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
                       <div className="conv-title" onClick={(e) => { e.stopPropagation(); if (!user.is_group) openUserProfile(user.id); }} style={{cursor: user.is_group ? 'default' : 'pointer'}}>{user.display_name || user.username}</div>
@@ -1230,20 +1541,45 @@ const ChatBox = () => {
                                     if (token) {
                                       const resp = await fetch(`/friends/${user.id}/remove`, {
                                         method: 'DELETE',
-                                        headers: { 'Authorization': `Bearer ${token}` }
+                                        headers: { 
+                                          'Authorization': `Bearer ${token}`,
+                                          'Content-Type': 'application/json'
+                                        }
                                       });
                                       if (resp.ok) {
                                         setUsers(prev => prev.filter(u => u.id !== user.id));
-                                        alert(`✅ Đã hủy kết bạn với ${user.display_name || user.username}`);
+                                        
+                                        // Add to suggestions if not already there
+                                        setSuggestions(prev => {
+                                          const alreadyExists = prev.some(s => s.id === user.id);
+                                          if (alreadyExists) return prev;
+                                          return [user, ...prev];
+                                        });
+                                        
+                                        // Clear selected user if they were selected
+                                        if (selectedUser?.id === user.id) {
+                                          handleSelectUser(null);
+                                        }
+                                        
+                                        const okMsg = `✅ Đã hủy kết bạn với ${user.display_name || user.username}`;
+                                        showToast('Bạn bè', okMsg);
+                                        showSystemNotification('Bạn bè', okMsg);
                                       } else {
-                                        alert('Lỗi khi hủy kết bạn');
+                                        const errData = await resp.json().catch(() => ({}));
+                                        const errMsg = errData.error || errData.message || 'Lỗi khi hủy kết bạn';
+                                        console.error('Remove friend error:', resp.status, errMsg);
+                                        showToast('Lỗi', errMsg);
+                                        showSystemNotification('Lỗi', errMsg);
                                       }
                                     } else {
-                                      alert('Chưa đăng nhập');
+                                      showToast('Yêu cầu đăng nhập', 'Chưa đăng nhập');
+                                      showSystemNotification('Yêu cầu đăng nhập', 'Chưa đăng nhập');
                                     }
                                   } catch (err) {
                                     console.error('Lỗi hủy kết bạn:', err);
-                                    alert('Lỗi khi hủy kết bạn');
+                                    const msg = `Lỗi khi hủy kết bạn: ${err.message}`;
+                                    showToast('Lỗi', msg);
+                                    showSystemNotification('Lỗi', msg);
                                   }
                                   setConfirmDialog({ open: false, title: '', onConfirm: null });
                                 }
@@ -1291,9 +1627,11 @@ const ChatBox = () => {
                   await groupAPI.createGroup(name);
                   const resp = await groupAPI.getMyGroups();
                   setGroups(resp.data || []);
-                  alert('Đã tạo nhóm');
+                  showToast('Nhóm', 'Đã tạo nhóm');
+                  showSystemNotification('Nhóm', 'Đã tạo nhóm');
                 } catch (err) {
-                  alert('Lỗi tạo nhóm');
+                  showToast('Nhóm', 'Lỗi tạo nhóm');
+                  showSystemNotification('Nhóm', 'Lỗi tạo nhóm');
                 }
               }}
             >
@@ -1310,9 +1648,11 @@ const ChatBox = () => {
                     try {
                       const resp = await groupAPI.getGroupMembers(g.id);
                       const names = resp.data.map((u) => u.username).join(', ');
-                      alert(`Thành viên: ${names}`);
+                        showToast('Thành viên nhóm', `Thành viên: ${names}`);
+                        showSystemNotification('Thành viên nhóm', `Thành viên: ${names}`);
                     } catch (err) {
-                      alert('Lỗi lấy thành viên');
+                        showToast('Nhóm', 'Lỗi lấy thành viên');
+                        showSystemNotification('Nhóm', 'Lỗi lấy thành viên');
                     }
                   }}
                 >
@@ -1341,7 +1681,8 @@ const ChatBox = () => {
                         try {
                           const token = localStorage.getItem('token');
                           if (!token) {
-                            alert('Cần đăng nhập để chặn người dùng');
+                            showToast('Yêu cầu đăng nhập', 'Cần đăng nhập để chặn người dùng');
+                            showSystemNotification('Yêu cầu đăng nhập', 'Cần đăng nhập để chặn người dùng');
                             return;
                           }
                           const target = selectedUser.id;
@@ -1349,11 +1690,13 @@ const ChatBox = () => {
                             // unblock
                             sendUnblockUser({ target, token });
                             setBlockedTargets(prev => prev.filter(x => x !== String(target)));
-                            alert('Đã bỏ chặn');
+                            showToast('Bỏ chặn', 'Đã bỏ chặn');
+                            showSystemNotification('Bỏ chặn', 'Đã bỏ chặn');
                           } else {
                             sendBlockUser({ target, token });
                             setBlockedTargets(prev => [String(target), ...prev]);
-                            alert('Đã chặn người dùng');
+                            showToast('Chặn', 'Đã chặn người dùng');
+                            showSystemNotification('Chặn', 'Đã chặn người dùng');
                           }
                         } catch (e) {
                           console.error('Block/unblock error', e);
@@ -1402,7 +1745,7 @@ const ChatBox = () => {
                         onReply={(message) => {
                           setReplyTo(message);
                           // Auto-focus input
-                          document.querySelector('.message-input')?.focus();
+                          inputRef.current?.focus();
                         }}
                         onReaction={(messageId, emoji) => {
                           sendReaction(messageId, currentUserId, emoji);
@@ -1470,6 +1813,7 @@ const ChatBox = () => {
               <input
                 type="text"
                 value={messageText}
+                ref={inputRef}
                 onChange={handleInputChange}
                 onFocus={() => setTyping(true)}
                 onBlur={() => {
@@ -1481,7 +1825,6 @@ const ChatBox = () => {
                 }}
                 placeholder="Nhập tin nhắn..."
                 className="message-input"
-                disabled={isSending}
               />
               
               {/* File Upload Input */}
@@ -1507,6 +1850,7 @@ const ChatBox = () => {
                 }}
                 title="Gửi file"
                 disabled={isSending}
+                onMouseDown={(e) => e.preventDefault()}
               >
                 📎
               </button>
@@ -1531,6 +1875,7 @@ const ChatBox = () => {
                     type="button"
                     className="btn-reaction"
                     onMouseDown={(e) => {
+                      e.preventDefault();
                       // start press animation
                       if (pressRafRef.current) cancelAnimationFrame(pressRafRef.current);
                       isPressingRef.current = true;
@@ -1719,6 +2064,7 @@ const ChatBox = () => {
                   type="submit"
                   className="btn-send"
                   disabled={isSending}
+                  onMouseDown={(e) => e.preventDefault()}
                   style={{
                     opacity: isSending ? 0.6 : 1,
                     cursor: isSending ? 'not-allowed' : 'pointer',

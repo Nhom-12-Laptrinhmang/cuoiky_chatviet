@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { showToast, showSystemNotification } from '../../services/notifications';
 import { useNavigate } from 'react-router-dom';
 
 const RegistrationInfo = () => {
@@ -20,16 +21,20 @@ const RegistrationInfo = () => {
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
-    alert('Đã copy vào clipboard!');
+    const msg = 'Đã copy vào clipboard!';
+    showToast('Clipboard', msg);
+    showSystemNotification('Clipboard', msg);
   };
 
   const handleClearInfo = () => {
-    if (window.confirm('Bạn chắc chắn muốn xóa thông tin đã lưu?')) {
+      if (window.confirm('Bạn chắc chắn muốn xóa thông tin đã lưu?')) {
       localStorage.removeItem('registeredUsername');
       localStorage.removeItem('registeredContact');
       localStorage.removeItem('registeredPassword');
       setRegInfo({ username: '', contact: '', password: '' });
-      alert('✅ Đã xóa thông tin');
+      const msg = '✅ Đã xóa thông tin';
+      showToast('Xóa thông tin', msg);
+      showSystemNotification('Xóa thông tin', msg);
     }
   };
 

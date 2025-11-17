@@ -1,0 +1,126 @@
+
+--- Chat save error (project) ---
+time: 2025-11-17T10:44:20.091040
+sender_id=27 receiver_id=12 client_message_id=cli_full_1763376260
+content repr: '❤️'
+traceback:
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such table: block
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/server/sockets/chat_events.py", line 266, in handle_send_message
+    blocked = Block.query.filter_by(user_id=receiver_id, target_id=sender_id).first()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/query.py", line 2759, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2351, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: block
+[SQL: SELECT block.id AS block_id, block.user_id AS block_user_id, block.target_id AS block_target_id, block.created_at AS block_created_at 
+FROM block 
+WHERE block.user_id = ? AND block.target_id = ?
+ LIMIT ? OFFSET ?]
+[parameters: (12, 27, 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+-----------------------
+
+--- Chat save error (project) ---
+time: 2025-11-17T10:45:43.143699
+sender_id=28 receiver_id=12 client_message_id=cli_full_1763376343
+content repr: '❤️'
+traceback:
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such table: block
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/server/sockets/chat_events.py", line 266, in handle_send_message
+    try:
+         
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/query.py", line 2759, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2351, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: block
+[SQL: SELECT block.id AS block_id, block.user_id AS block_user_id, block.target_id AS block_target_id, block.created_at AS block_created_at 
+FROM block 
+WHERE block.user_id = ? AND block.target_id = ?
+ LIMIT ? OFFSET ?]
+[parameters: (12, 28, 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+-----------------------

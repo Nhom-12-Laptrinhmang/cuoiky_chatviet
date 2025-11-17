@@ -25,6 +25,7 @@ const maskContact = (c) => {
 const ForgotPassword = () => {
   const [step, setStep] = useState(1); // 1: nhập username, 2: nhập OTP + mật khẩu mới
   const [contact, setContact] = useState('');
+  const [method, setMethod] = useState('auto'); // 'auto' | 'email' | 'zalo'
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -50,7 +51,7 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      const response = await authAPI.forgotPassword(contact);
+      const response = await authAPI.forgotPassword(contact, method);
       if (response.data.success) {
         setSuccess('✅ OTP đã gửi!');
         setStep(2);
@@ -97,7 +98,7 @@ const ForgotPassword = () => {
     setError('');
     setLoading(true);
     try {
-      const response = await authAPI.forgotPassword(contact);
+      const response = await authAPI.forgotPassword(contact, method);
       if (response.data.success) {
         setSuccess('✅ OTP đã gửi lại!');
         setResendTimer(60);
@@ -128,6 +129,20 @@ const ForgotPassword = () => {
                 placeholder="Nhập email hoặc số điện thoại"
                 required
               />
+              <div style={{ marginTop: 8, display: 'flex', gap: 12, alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input type="radio" name="method" value="auto" checked={method === 'auto'} onChange={() => setMethod('auto')} />
+                  <span>Gửi theo phương thức phù hợp</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input type="radio" name="method" value="email" checked={method === 'email'} onChange={() => setMethod('email')} />
+                  <span>Gửi email</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input type="radio" name="method" value="zalo" checked={method === 'zalo'} onChange={() => setMethod('zalo')} />
+                  <span>Gửi Zalo/SMS</span>
+                </label>
+              </div>
             </div>
 
             {error && <div className="error-message">{error}</div>}

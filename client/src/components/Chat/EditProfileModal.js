@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { userAPI } from '../../services/api';
 import api from '../../services/api';
+import { showToast, showSystemNotification } from '../../services/notifications';
 
 const EditProfileModal = ({ isOpen, onClose, user, onSaved, onBack }) => {
   const [displayName, setDisplayName] = useState(user?.display_name || user?.username || '');
@@ -50,7 +51,9 @@ const EditProfileModal = ({ isOpen, onClose, user, onSaved, onBack }) => {
     } catch (err) {
       console.error('Save profile failed', err);
       const serverMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message;
-      alert(serverMsg ? `Lưu thất bại: ${serverMsg}` : 'Lưu thất bại');
+      const msg = serverMsg ? `Lưu thất bại: ${serverMsg}` : 'Lưu thất bại';
+      showToast('Lưu hồ sơ thất bại', msg);
+      showSystemNotification('Lưu hồ sơ thất bại', msg);
     }
   };
 

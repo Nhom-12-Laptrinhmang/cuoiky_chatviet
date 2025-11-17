@@ -5,6 +5,9 @@ from sqlalchemy import or_
 import os
 from werkzeug.utils import secure_filename
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 messages_bp = Blueprint('messages', __name__, url_prefix='/messages')
 
@@ -20,16 +23,16 @@ def get_messages():
     """
     sender_id = request.args.get('sender_id')
     receiver_id = request.args.get('receiver_id')
-    print(f"[MESSAGES] sender={sender_id} receiver={receiver_id}")
+    logger.info("[MESSAGES] sender=%s receiver=%s", sender_id, receiver_id)
     if not sender_id or not receiver_id:
-        print("[MESSAGES] Missing sender_id or receiver_id")
+        logger.warning("[MESSAGES] Missing sender_id or receiver_id")
         return jsonify({'error': 'Missing sender_id or receiver_id'}), 400
 
     try:
         a = int(sender_id)
         b = int(receiver_id)
     except ValueError:
-        print("[MESSAGES] sender_id and receiver_id must be integers")
+        logger.warning("[MESSAGES] sender_id and receiver_id must be integers")
         return jsonify({'error': 'sender_id and receiver_id must be integers'}), 400
 
     limit = request.args.get('limit', type=int)
@@ -60,7 +63,7 @@ def get_messages():
             'timestamp': m.timestamp.isoformat()
         } for m in msgs
     ]
-    print(f"[MESSAGES] count={len(response_data)}")
+    logger.info("[MESSAGES] count=%s", len(response_data))
     return jsonify(response_data)
 
 
@@ -159,7 +162,7 @@ def upload_file():
         saved_filename = prefix + filename
         filepath = os.path.join(upload_dir, saved_filename)
         file.save(filepath)
-        print(f"[UPLOAD] File saved: {filepath}")
+        logger.info("[UPLOAD] File saved: %s", filepath)
         
         # Create message with file URL
         file_url = f'/uploads/files/{saved_filename}'
@@ -172,7 +175,7 @@ def upload_file():
         
         db.session.add(msg)
         db.session.commit()
-        print(f"[UPLOAD] Message created: {msg.id}")
+        logger.info("[UPLOAD] Message created: %s", msg.id)
         
         return jsonify({
             'id': msg.id,
@@ -182,7 +185,5 @@ def upload_file():
         }), 201
     except Exception as e:
         db.session.rollback()
-        print(f"[UPLOAD ERROR] {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("[UPLOAD ERROR] %s", str(e))
         return jsonify({'error': str(e)}), 500

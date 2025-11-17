@@ -1,6 +1,9 @@
 from pyngrok import ngrok
 import os
 import subprocess
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def start_ngrok(app, port=None):
@@ -48,14 +51,14 @@ def start_ngrok(app, port=None):
         # If pyngrok fails due to an already-online endpoint, try to return an existing tunnel;
         # otherwise fall back to asking the user to run ngrok manually.
         msg = str(e)
-        print(f"[NGROK] pyngrok failed ({e}), attempting fallback checks...")
+        logger.warning("[NGROK] pyngrok failed (%s), attempting fallback checks...", msg)
         try:
             existing = ngrok.get_tunnels()
             for t in existing:
                 addr = getattr(t, 'addr', '') or ''
                 if str(port) in addr or addr.endswith(f":{port}") or addr.endswith(f"localhost:{port}"):
                     public_url = t.public_url
-                    app.logger.info(f"[NGROK] Found existing tunnel after error: {public_url}")
+                    app.logger.info("[NGROK] Found existing tunnel after error: %s", public_url)
                     app.config["BASE_URL"] = public_url
                     return public_url
         except Exception:

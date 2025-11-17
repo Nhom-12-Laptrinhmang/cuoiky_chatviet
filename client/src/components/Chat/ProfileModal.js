@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { userAPI } from '../../services/api';
-import api from '../../services/api';
+import api, { apiDirect } from '../../services/api';
 import { sendFriendRequest } from '../../services/socket';
+import { showToast, showSystemNotification } from '../../services/notifications';
 
 const formatDateVN = (iso) => {
   if (!iso) return '';
@@ -41,6 +42,7 @@ const ProfileModal = ({ isOpen, onClose, user, onUpdated, onOpenEdit, isOwner = 
   const [birthdate, setBirthdate] = useState(user?.birthdate || '');
   const [phoneNumber, setPhoneNumber] = useState(user?.phone_number || '');
   const [sendingFriendRequest, setSendingFriendRequest] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setDisplayName(user?.display_name || user?.username || '');
@@ -64,17 +66,47 @@ const ProfileModal = ({ isOpen, onClose, user, onUpdated, onOpenEdit, isOwner = 
 
   const handleSave = async () => {
     try {
+      setSaving(true);
       let avatar_url = avatarPreview;
       // If a file was selected, upload it to backend first
       if (file) {
         const form = new FormData();
         form.append('avatar', file);
-        // use axios instance so interceptor attaches token automatically
-        const upResp = await api.post('/uploads/avatar', form, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        // Try proxied request first, then fallback to direct backend call, then fetch fallback
+        let upResp = null;
+        try {
+          upResp = await api.post('/uploads/avatar', form);
+        } catch (err) {
+          console.warn('proxied upload failed', err);
+          try {
+            upResp = await apiDirect.post('/uploads/avatar', form);
+          } catch (err2) {
+            console.warn('direct axios upload failed', err2);
+            // final fetch fallback to direct baseURL
+            try {
+              const directBase = apiDirect?.defaults?.baseURL || 'http://localhost:5000';
+              const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+              const fetchResp = await fetch(directBase + '/uploads/avatar', {
+                method: 'POST',
+                body: form,
+                headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+              });
+              const contentType = fetchResp.headers.get('content-type') || '';
+              const data = contentType.includes('application/json') ? await fetchResp.json() : await fetchResp.text();
+              upResp = { status: fetchResp.status, data };
+            } catch (err3) {
+              console.error('fetch upload fallback failed', err3);
+              throw err; // rethrow original proxied error to be handled by outer catch
+            }
+          }
+        }
         if (!upResp || !upResp.data) throw new Error('Upload failed (no response)');
-        avatar_url = upResp.data.avatar_url;
+        // Accept multiple possible response shapes from backend
+        const d = upResp.data || {};
+        avatar_url = d.avatar_url || d.url || d.file_url || d.path || avatarPreview;
+        if (!avatar_url) {
+          throw new Error('Upload did not return avatar URL');
+        }
       }
 
   const payload = { display_name: displayName };
@@ -82,17 +114,81 @@ const ProfileModal = ({ isOpen, onClose, user, onUpdated, onOpenEdit, isOwner = 
   if (gender) payload.gender = gender;
   if (birthdate) payload.birthdate = birthdate;
   if (phoneNumber) payload.phone_number = phoneNumber;
-  const resp = await userAPI.updateMe(payload);
+  // Try to update via proxied API first; fallback to direct backend if needed
+  let resp = null;
+  const directBase = apiDirect?.defaults?.baseURL || 'http://localhost:5000';
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  try {
+    resp = await userAPI.updateMe(payload);
+  } catch (err) {
+    console.warn('proxied patch failed', err);
+    try {
+      resp = await apiDirect.patch('/users/me', payload);
+    } catch (err2) {
+      console.warn('direct axios patch failed', err2);
+      // final fetch fallback to direct backend
+      try {
+        const fetchResp = await fetch(directBase + '/users/me', {
+          method: 'PATCH',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { Authorization: `Bearer ${token}` } : {}),
+          body: JSON.stringify(payload),
+        });
+        const ctype = fetchResp.headers.get('content-type') || '';
+        const pdata = ctype.includes('application/json') ? await fetchResp.json() : await fetchResp.text();
+        if (!fetchResp.ok) {
+          throw new Error(`fetch patch failed ${fetchResp.status} ${JSON.stringify(pdata)}`);
+        }
+        resp = { status: fetchResp.status, data: pdata };
+      } catch (err3) {
+        console.error('fetch patch fallback failed', err3);
+        throw err; // rethrow original proxied error to be handled by outer catch
+      }
+    }
+  }
       // After successful save, update parent state and return to view mode inside this modal
+      try {
+        // Update local preview/avatar state and clear file
+        setAvatarPreview(avatar_url);
+        setFile(null);
+      } catch (e) {}
       onUpdated && onUpdated(resp.data);
       setEditing(false);
+      showToast('Cập nhật', 'Thông tin đã được lưu');
+      showSystemNotification('Cập nhật', 'Thông tin đã được lưu');
     } catch (err) {
-      // Try to surface server error message if available
-      console.error('Update profile failed', err);
-      const serverMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message;
-      alert(serverMsg ? `Cập nhật thất bại: ${serverMsg}` : 'Cập nhật thất bại');
+      // Improved diagnostics: log whole axios error and present a clearer toast
+      try {
+        console.error('Update profile failed', err);
+        if (err && typeof err.toJSON === 'function') console.error('Axios error.toJSON():', err.toJSON());
+        if (err?.config) console.error('Request config:', err.config);
+        if (err?.request) console.error('No/partial response. Request:', err.request);
+        if (err?.response) console.error('Response data:', err.response.status, err.response.data);
+      } catch (logErr) {
+        console.error('Error while logging profile update failure', logErr);
+      }
+
+      // Build user-facing message
+      let msg = 'Cập nhật thất bại';
+      if (err?.response) {
+        const status = err.response.status;
+        let body = err.response.data;
+        try { body = typeof body === 'object' ? JSON.stringify(body) : String(body); } catch (e) { body = String(err.response.data); }
+        msg = `Cập nhật thất bại: server ${status} ${body}`;
+      } else if (err?.request) {
+        // request was made but no response received
+        msg = `Cập nhật thất bại: không nhận được phản hồi từ server (${err.message || err.code || 'Network Error'})`;
+      } else if (err?.message) {
+        msg = `Cập nhật thất bại: ${err.message}`;
+      }
+
+      showToast('Cập nhật thất bại', msg);
+      showSystemNotification('Cập nhật thất bại', msg);
+    } finally {
+      setSaving(false);
     }
   };
+
+
 
   const handleLogout = async () => {
     // remove token and reload to login screen
@@ -101,100 +197,48 @@ const ProfileModal = ({ isOpen, onClose, user, onUpdated, onOpenEdit, isOwner = 
   };
 
   return (
-    <div className="profile-modal-backdrop">
-      <div className="profile-modal">
-        <div className="profile-modal-header" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+    <div className="profile-modal-backdrop" style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div className="profile-modal" style={{width:720, maxWidth:'95%', maxHeight:'80vh', background:'#fff', borderRadius:10, overflow:'hidden', display:'flex', flexDirection:'column'}}>
+        <div className="profile-modal-header" style={{display:'flex',alignItems:'center',justifyContent:'space-between', padding:12, borderBottom:'1px solid #eee'}}>
           <div style={{display:'flex',alignItems:'center',gap:12}}>
             {editing ? (
-              <button className="btn" onClick={() => setEditing(false)}>◀</button>
+              <button className="btn" onClick={() => setEditing(false)} style={{padding:'6px 8px'}}>◀</button>
             ) : null}
-            <h3 style={{margin:0}}>Thông tin tài khoản</h3>
+            <h3 style={{margin:0,fontSize:16}}>Thông tin tài khoản</h3>
           </div>
-          <button className="btn-close" onClick={onClose}>✕</button>
+          <button onClick={onClose} style={{border:'none',background:'#f3f4f6',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:6,cursor:'pointer'}}>✕</button>
         </div>
 
-        <div className="profile-hero" style={{background:'#e8f0ea',height:120}}></div>
+        <div style={{height:64, background:'#e8f0ea', flexShrink:0}} />
 
-        <div className="profile-main">
-          <div className="profile-left">
-            <div className="avatar-wrapper">
-              <img className="profile-avatar" alt="avatar" src={avatarPreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName||user?.username||'U')}&background=ffffff&color=0b5ed7`} />
-              <label className="avatar-upload">
-                <input type="file" accept="image/*" onChange={onFileChange} style={{display:'none'}} />
-                📷
-              </label>
+        <div className="profile-main" style={{overflowY:'auto', padding:16, display:'flex', gap:20}}>
+          <div className="profile-left" style={{width:220, display:'flex', flexDirection:'column', alignItems:'center'}}>
+            <div className="avatar-wrapper" style={{width:120,height:120,borderRadius:60,overflow:'hidden',background:'#f0f0f0',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <img className="profile-avatar" alt="avatar" src={avatarPreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName||user?.username||'U')}&background=ffffff&color=0b5ed7`} style={{width:'100%',height:'100%',objectFit:'cover'}} />
             </div>
-            <h4>{displayName || user?.username}</h4>
+            <label style={{marginTop:8,cursor:'pointer'}} className="avatar-upload">
+              <input type="file" accept="image/*" onChange={onFileChange} style={{display:'none'}} />
+              📷
+            </label>
+            <h4 style={{marginTop:8, textAlign:'center'}}>{displayName || user?.username}</h4>
           </div>
 
-          <div className="profile-right">
+          <div className="profile-right" style={{flex:1}}>
             {!editing && (
               <div>
-                <div style={{display:'grid',gridTemplateColumns:'120px 1fr',rowGap:12,columnGap:12,alignItems:'center'}}>
-                  <div style={{color:'#6b7280'}}>Giới tính</div>
-                  <div style={{fontWeight:600}}>{user?.gender === 'male' ? 'Nam' : user?.gender === 'female' ? 'Nữ' : ''}</div>
+                <div style={{display:'grid',gridTemplateColumns:'140px 1fr',rowGap:10,columnGap:12,alignItems:'center'}}>
+                  <div style={{color:'#6b7280', fontSize:13}}>Giới tính</div>
+                  <div style={{fontWeight:600, fontSize:14}}>{user?.gender === 'male' ? 'Nam' : user?.gender === 'female' ? 'Nữ' : ''}</div>
 
-                  <div style={{color:'#6b7280'}}>Ngày sinh</div>
-                  <div style={{fontWeight:600}}>{formatDateVN(user?.birthdate)}</div>
+                  <div style={{color:'#6b7280', fontSize:13}}>Ngày sinh</div>
+                  <div style={{fontWeight:600, fontSize:14}}>{formatDateVN(user?.birthdate)}</div>
 
-                  <div style={{color:'#6b7280'}}>Điện thoại</div>
-                  <div style={{fontWeight:600}}>{formatPhone(user?.phone_number)}</div>
-                </div>
-
-                <div style={{marginTop:18}}>
-                  <p style={{color:'#6b7280'}}>Chỉ bạn bè có lưu số của bạn trong danh bạ máy xem được số này</p>
+                  <div style={{color:'#6b7280', fontSize:13}}>Điện thoại</div>
+                  <div style={{fontWeight:600, fontSize:14}}>{formatPhone(user?.phone_number)}</div>
                 </div>
 
                 <div style={{marginTop:12}}>
-                  {isOwner ? (
-                    <button onClick={() => { setEditing(true); }} className="btn">✎ Cập nhật</button>
-                  ) : (
-                    <div style={{display:'flex',gap:8}}>
-                      {!user?.is_friend ? (
-                        <button
-                          className="btn"
-                          disabled={sendingFriendRequest}
-                          onClick={async () => {
-                            const token = localStorage.getItem('token');
-                            try {
-                              setSendingFriendRequest(true);
-                              if (token) {
-                                sendFriendRequest({ target_user_id: user?.id, token });
-                                alert('Đã gửi lời mời kết bạn');
-                              } else {
-                                await userAPI.addFriend(user?.id);
-                                alert('Đã gửi lời mời kết bạn (REST)');
-                              }
-                            } catch (err) {
-                              console.error('Send friend request failed', err);
-                              const msg = err?.response?.data?.error || err?.message || 'Gửi thất bại';
-                              alert(msg);
-                            } finally {
-                              setSendingFriendRequest(false);
-                            }
-                          }}
-                        >
-                          ➕ Thêm
-                        </button>
-                      ) : (
-                        <button className="btn" disabled title="Bạn bè">Bạn bè</button>
-                      )}
-
-                      <button
-                        className="btn"
-                        onClick={() => {
-                          try {
-                            if (onStartChat) onStartChat(user);
-                          } catch (e) {
-                            console.error('onStartChat handler error', e);
-                          }
-                          onClose();
-                        }}
-                      >
-                        ✉️ Nhắn tin
-                      </button>
-                    </div>
-                  )}
+                  <p style={{color:'#6b7280', margin:0}}>Chỉ bạn bè có lưu số của bạn trong danh bạ máy xem được số này</p>
                 </div>
               </div>
             )}
@@ -223,14 +267,58 @@ const ProfileModal = ({ isOpen, onClose, user, onUpdated, onOpenEdit, isOwner = 
                   <label>Số điện thoại</label>
                   <input value={phoneNumber || ''} onChange={(e) => setPhoneNumber(e.target.value)} />
                 </div>
-
-                <div style={{marginTop:10}}>
-                  <button onClick={handleSave} className="btn btn-primary">Lưu</button>
-                  <button onClick={() => setEditing(false)} className="btn" style={{marginLeft:8}}>Hủy</button>
-                </div>
               </div>
             )}
           </div>
+        </div>
+
+        {/* Sticky footer with actions */}
+        <div style={{borderTop:'1px solid #eee', padding:12, display:'flex', justifyContent:'flex-end', gap:8, flexShrink:0, background:'#fff'}}>
+          {!editing && isOwner && (
+            <button onClick={() => setEditing(true)} className="btn">✎ Cập nhật</button>
+          )}
+
+          {!editing && !isOwner && (
+            <div style={{display:'flex',gap:8}}>
+              {!user?.is_friend ? (
+                <button className="btn" disabled={sendingFriendRequest} onClick={async () => {
+                  const token = localStorage.getItem('token');
+                  try {
+                    setSendingFriendRequest(true);
+                    if (token) {
+                      sendFriendRequest({ target_user_id: user?.id, token });
+                      showToast('Lời mời kết bạn', 'Đã gửi lời mời kết bạn');
+                      showSystemNotification('Lời mời kết bạn', 'Đã gửi lời mời kết bạn');
+                    } else {
+                      await userAPI.addFriend(user?.id);
+                      showToast('Lời mời kết bạn', 'Đã gửi lời mời kết bạn (REST)');
+                      showSystemNotification('Lời mời kết bạn', 'Đã gửi lời mời kết bạn (REST)');
+                    }
+                  } catch (err) {
+                    console.error('Send friend request failed', err);
+                    const msg = err?.response?.data?.error || err?.message || 'Gửi thất bại';
+                    showToast('Gửi lời mời thất bại', msg);
+                    showSystemNotification('Gửi lời mời thất bại', msg);
+                  } finally {
+                    setSendingFriendRequest(false);
+                  }
+                }}>➕ Thêm</button>
+              ) : (
+                <button className="btn" disabled title="Bạn bè">Bạn bè</button>
+              )}
+
+              <button className="btn" onClick={() => { try { if (onStartChat) onStartChat(user); } catch(e){} onClose(); }}>✉️ Nhắn tin</button>
+            </div>
+          )}
+
+          {editing && (
+            <>
+              <button onClick={handleSave} className="btn btn-primary" disabled={saving}>
+                {saving ? 'Đang lưu...' : 'Lưu'}
+              </button>
+              <button onClick={() => setEditing(false)} className="btn">Hủy</button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -8,9 +8,10 @@ auth_forgot_bp = Blueprint('auth_forgot', __name__, url_prefix='/forgot-password
 def forgot_password():
     data = request.get_json() or {}
     contact = data.get('contact') or data.get('username')
+    method = data.get('method')  # optional: 'email' or 'zalo'/'sms' or 'auto'
     if not contact:
         return jsonify({'error': 'Missing contact (email or phone)'}), 400
-    result = send_otp(contact)
+    result = send_otp(contact, method=method)
     return jsonify(result), (200 if result.get('success') else 400)
 
 

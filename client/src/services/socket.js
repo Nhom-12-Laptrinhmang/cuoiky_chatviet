@@ -14,28 +14,30 @@ if (!SOCKET_URL) {
   // Only if specifically needed (e.g., dev server behind proxy), override REACT_APP_SOCKET_URL
   SOCKET_URL = window.location.origin;
 }
+const isDev = process.env.NODE_ENV === 'development';
 
-console.log('');
-console.log('═══════════════════════════════════════════════════════════');
-console.log('🔗 [SOCKET] INITIALIZATION');
-console.log('═══════════════════════════════════════════════════════════');
-console.log(`📍 SOCKET_URL: ${SOCKET_URL}`);
-console.log(`📍 Current location: ${window.location.href}`);
-console.log(`📍 Hostname: ${window.location.hostname}`);
-console.log(`📍 Protocol: ${window.location.protocol}`);
-console.log('═══════════════════════════════════════════════════════════');
-console.log('');
+if (isDev) {
+  console.debug('');
+  console.debug('═══════════════════════════════════════════════════════════');
+  console.debug('🔗 [SOCKET] INITIALIZATION');
+  console.debug('═══════════════════════════════════════════════════════════');
+  console.debug(`📍 SOCKET_URL: ${SOCKET_URL}`);
+  console.debug(`📍 Current location: ${window.location.href}`);
+  console.debug(`📍 Hostname: ${window.location.hostname}`);
+  console.debug(`📍 Protocol: ${window.location.protocol}`);
+  console.debug('═══════════════════════════════════════════════════════════');
+  console.debug('');
+}
 
 let socket = null;
 
 // Tạo kết nối Socket.IO
 export const initializeSocket = () => {
   if (socket) {
-    console.log('[SOCKET] Socket already initialized, returning existing instance');
+    if (isDev) console.debug('[SOCKET] Socket already initialized, returning existing instance');
     return socket;
   }
-
-  console.log('[SOCKET] Attempting to connect to', SOCKET_URL);
+  if (isDev) console.debug('[SOCKET] Attempting to connect to', SOCKET_URL);
   socket = io(SOCKET_URL, {
     reconnection: true,
     reconnectionDelay: 1000,
@@ -44,14 +46,16 @@ export const initializeSocket = () => {
   });
 
   socket.on('connect', () => {
-    console.log('');
-    console.log('✅ [SOCKET] Connected successfully!');
-    console.log(`   sid: ${socket.id}`);
-    console.log('');
+    if (isDev) {
+      console.debug('');
+      console.debug('✅ [SOCKET] Connected successfully!');
+      console.debug(`   sid: ${socket.id}`);
+      console.debug('');
+    }
   });
 
   socket.on('disconnect', () => {
-    console.log('❌ [SOCKET] Disconnected');
+    if (isDev) console.debug('❌ [SOCKET] Disconnected');
   });
 
   socket.on('connect_error', (error) => {
@@ -80,7 +84,7 @@ export const closeSocket = () => {
 // Generic send command (JSON-style): { action: 'SOMETHING', data: {...}, token }
 export const sendCommand = (cmd) => {
   const sock = getSocket();
-  console.log('[COMMAND] Emitting command:', cmd);
+  if (isDev) console.debug('[COMMAND] Emitting command:', cmd);
   sock.emit('command', cmd);
 };
 
@@ -94,7 +98,7 @@ export const onCommandResponse = (callback) => {
   const sock = getSocket();
   sock.off('command_response');
   sock.on('command_response', (data) => {
-    console.log('[COMMAND_RESPONSE] Received:', data);
+    if (isDev) console.debug('[COMMAND_RESPONSE] Received:', data);
     try {
       callback(data);
     } catch (e) {
@@ -106,15 +110,15 @@ export const onCommandResponse = (callback) => {
 // Tham gia room chat
 export const joinUserRoom = (userId) => {
   const sock = getSocket();
-  console.log(`\n[JOIN] Attempting to join user room: user-${userId}`);
+  if (isDev) console.debug(`\n[JOIN] Attempting to join user room: user-${userId}`);
   if (!sock || !sock.connected) {
     console.warn(`[JOIN] ⚠️  Socket not connected yet (connected=${sock?.connected}), will retry in 500ms`);
     setTimeout(() => joinUserRoom(userId), 500);
     return;
   }
-  console.log(`[JOIN] ✅ Socket connected, emitting join event...`);
+  if (isDev) console.debug(`[JOIN] ✅ Socket connected, emitting join event...`);
   sock.emit('join', { user_id: userId });
-  console.log(`[JOIN] ✅ Join event emitted for user_id: ${userId}\n`);
+  if (isDev) console.debug(`[JOIN] ✅ Join event emitted for user_id: ${userId}\n`);
 };
 
 // Gửi tin nhắn qua Socket (có hỗ trợ reply_to, forward_from, client_message_id)
@@ -128,19 +132,25 @@ export const sendMessage = (senderId, receiverId, content, opts = {}) => {
     reply_to_id: opts.reply_to_id || null,
     forward_from_id: opts.forward_from_id || null,
   };
-  console.log('\n========== [SEND_MESSAGE] CLIENT ==========');
-  console.log('Payload:', payload);
-  console.log('Socket connected?', sock?.connected);
-  console.log('Socket id:', sock?.id);
   sock.emit('send_message', payload);
-  console.log('✅ Emitted to server');
-  console.log('========== \n');
+  // debug output only in development
+  if (isDev) sendMessageDebug(payload, sock);
+};
+// wrap send message debug logs in dev-only
+export const sendMessageDebug = (payload, sock) => {
+  if (!isDev) return;
+  console.debug('\n========== [SEND_MESSAGE] CLIENT ==========');
+  console.debug('Payload:', payload);
+  console.debug('Socket connected?', sock?.connected);
+  console.debug('Socket id:', sock?.id);
+  console.debug('✅ Emitted to server');
+  console.debug('========== \n');
 };
 
 // Gửi reaction (cảm xúc)
 export const sendReaction = (messageId, userId, reaction) => {
   const sock = getSocket();
-  console.log('[ADD_REACTION] message_id:', messageId, 'reaction:', reaction);
+  if (isDev) console.debug('[ADD_REACTION] message_id:', messageId, 'reaction:', reaction);
   sock.emit('add_reaction', {
     message_id: messageId,
     user_id: userId,
@@ -158,18 +168,20 @@ export const sendSticker = (senderId, receiverId, stickerId, stickerUrl, opts = 
     sticker_url: stickerUrl,
     client_message_id: opts.client_message_id || null,
   };
-  console.log('\n========== [SEND_STICKER] CLIENT ==========');
-  console.log('Payload:', payload);
-  console.log('Socket connected?', sock?.connected);
   sock.emit('send_sticker', payload);
-  console.log('✅ Sticker emitted to server');
-  console.log('========== \n');
+  if (isDev) {
+    console.debug('\n========== [SEND_STICKER] CLIENT ==========');
+    console.debug('Payload:', payload);
+    console.debug('Socket connected?', sock?.connected);
+    console.debug('✅ Sticker emitted to server');
+    console.debug('========== \n');
+  }
 };
 
 // Gửi typing indicator
 export const sendTyping = (senderId, receiverId, isTyping) => {
   const sock = getSocket();
-  console.log('[SEND_TYPING] sender:', senderId, 'receiver:', receiverId, 'is_typing:', isTyping);
+  if (isDev) console.debug('[SEND_TYPING] sender:', senderId, 'receiver:', receiverId, 'is_typing:', isTyping);
   sock.emit('typing', {
     sender_id: senderId,
     receiver_id: receiverId,
@@ -182,9 +194,11 @@ export const onReceiveMessage = (callback) => {
   // Off previous listeners to avoid duplicates
   sock.off('receive_message');
   sock.on('receive_message', (data) => {
-    console.log('\n========== [RECEIVE_MESSAGE] CLIENT ==========');
-    console.log('Received:', data);
-    console.log('========== \n');
+    if (isDev) {
+      console.debug('\n========== [RECEIVE_MESSAGE] CLIENT ==========');
+      console.debug('Received:', data);
+      console.debug('========== \n');
+    }
     callback(data);
   });
 };
@@ -194,7 +208,7 @@ export const onMessageSentAck = (callback) => {
   const sock = getSocket();
   sock.off('message_sent_ack');
   sock.on('message_sent_ack', (data) => {
-    console.log('[MESSAGE_SENT_ACK]', data);
+    if (isDev) console.debug('[MESSAGE_SENT_ACK]', data);
     callback(data);
   });
 };
@@ -205,7 +219,7 @@ export const onReaction = (callback) => {
   // Off previous listeners to avoid duplicates
   sock.off('message_reaction');
   sock.on('message_reaction', (data) => {
-    console.log('[REACTION]', data);
+    if (isDev) console.debug('[REACTION]', data);
     callback(data);
   });
 };
@@ -216,7 +230,7 @@ export const onTyping = (callback) => {
   // Off previous listeners to avoid duplicates
   sock.off('user_typing');
   sock.on('user_typing', (data) => {
-    console.log('[TYPING]', data);
+    if (isDev) console.debug('[TYPING]', data);
     callback(data);
   });
 };
@@ -225,16 +239,6 @@ export const onTyping = (callback) => {
 export const onUserOffline = (callback) => {
   const sock = getSocket();
   sock.on('user_offline', callback);
-};
-
-// Lắng nghe user status changed (online/offline)
-export const onUserStatusChanged = (callback) => {
-  const sock = getSocket();
-  sock.off('user_status_changed');
-  sock.on('user_status_changed', (data) => {
-    console.log('[USER_STATUS_CHANGED]', data);
-    callback(data);
-  });
 };
 
 // Lắng nghe user joined
@@ -256,7 +260,7 @@ export const onFriendRequestReceived = (callback) => {
   const sock = getSocket();
   sock.off('friend_request_received');
   sock.on('friend_request_received', (data) => {
-    console.log('[FRIEND_REQUEST_RECEIVED]', data);
+    if (isDev) console.debug('[FRIEND_REQUEST_RECEIVED]', data);
     callback(data);
   });
 };
@@ -277,7 +281,7 @@ export const onFriendAccepted = (callback) => {
   const sock = getSocket();
   sock.off('friend_request_accepted');
   sock.on('friend_request_accepted', (data) => {
-    console.log('[FRIEND_REQUEST_ACCEPTED]', data);
+    if (isDev) console.debug('[FRIEND_REQUEST_ACCEPTED]', data);
     callback(data);
   });
 };
@@ -286,7 +290,7 @@ export const onFriendRejected = (callback) => {
   const sock = getSocket();
   sock.off('friend_request_rejected');
   sock.on('friend_request_rejected', (data) => {
-    console.log('[FRIEND_REQUEST_REJECTED]', data);
+    if (isDev) console.debug('[FRIEND_REQUEST_REJECTED]', data);
     callback(data);
   });
 };
@@ -306,7 +310,7 @@ export const onUserBlocked = (callback) => {
   const sock = getSocket();
   sock.off('user_blocked');
   sock.on('user_blocked', (data) => {
-    console.log('[USER_BLOCKED]', data);
+    if (isDev) console.debug('[USER_BLOCKED]', data);
     callback(data);
   });
 };
@@ -320,7 +324,7 @@ export const onContactUpdated = (callback) => {
   const sock = getSocket();
   sock.off('contact_updated');
   sock.on('contact_updated', (data) => {
-    console.log('[CONTACT_UPDATED]', data);
+    if (isDev) console.debug('[CONTACT_UPDATED]', data);
     callback(data);
   });
 };

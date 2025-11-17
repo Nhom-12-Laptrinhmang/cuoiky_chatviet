@@ -1,10 +1,18 @@
 from flask import Flask, request, make_response, send_from_directory
 from flask_socketio import SocketIO
+import sys, os
+
+# Ensure the server package directory is on sys.path so imports like
+# `from config.settings import Config` (where config lives in server/config)
+# resolve when importing `server.app` from the project root.
+sys.path.insert(0, os.path.dirname(__file__))
+
 from config.settings import Config
 from config.database import db, migrate
 from services.network_setup import start_ngrok
 import logging
 import os
+from utils.logging_helpers import LoggingDedupFilter
 
 # Initialize Flask app
 # Serve client build (if present) as static files so the same public URL can serve frontend + API
@@ -103,6 +111,7 @@ from routes.messages import messages_bp
 from routes.friends import friends_bp
 from routes.groups import groups_bp
 from routes.uploads import uploads_bp
+from routes.stickers import stickers_bp
 from routes.auth.me import auth_me_bp
 
 app.register_blueprint(auth_register_bp)
@@ -115,6 +124,7 @@ app.register_blueprint(messages_bp)
 app.register_blueprint(friends_bp)
 app.register_blueprint(groups_bp)
 app.register_blueprint(uploads_bp)
+app.register_blueprint(stickers_bp)
 app.register_blueprint(auth_me_bp)
 
 # Ensure DB tables exist for development convenience (creates missing tables).
@@ -125,6 +135,7 @@ with app.app_context():
         from models.friend_model import Friend
         from models.group_model import Group
         from models.message_model import Message
+        from models.sticker_model import Sticker
     except Exception:
         # If imports fail, log and continue; create_all may still create available tables
         app.logger.debug('Model import failed during create_all prep')
@@ -185,11 +196,27 @@ def serve_client(path):
         return send_from_directory(CLIENT_BUILD_DIR, requested)
     return send_from_directory(CLIENT_BUILD_DIR, 'index.html')
 
-# Logging setup
-logging.basicConfig(level=logging.INFO)
+# Logging setup: concise format with timestamp, level, module, message
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
+logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(levelname)s %(name)s: %(message)s')
+logger = logging.getLogger(__name__)
+
+# Add deduplication filter to reduce repeated identical messages (default 5s)
+try:
+    dedup_seconds = int(os.environ.get('LOG_DEDUP_SECONDS', '5'))
+except Exception:
+    dedup_seconds = 5
+root_logger = logging.getLogger()
+root_logger.addFilter(LoggingDedupFilter(window_seconds=dedup_seconds))
 
 # Reduce noisy logs from pyngrok unless explicitly debugging
 logging.getLogger('pyngrok').setLevel(logging.ERROR)
+# By default suppress Werkzeug access logs to keep terminal readable.
+# Set LOG_SHOW_ACCESS=true to re-enable access logs.
+if os.environ.get('LOG_SHOW_ACCESS', 'false').lower() != 'true':
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
+    logging.getLogger('engineio').setLevel(logging.WARNING)
+    logging.getLogger('socketio').setLevel(logging.WARNING)
 
 if __name__ == "__main__":
     try:
@@ -199,22 +226,16 @@ if __name__ == "__main__":
         # Only attempt to start ngrok if explicitly enabled via env var.
         if os.environ.get('ENABLE_NGROK', 'false').lower() == 'true':
             public_url = start_ngrok(app, port=port)
-            print("\n")
-            print("=" * 80)
-            print("🌐 [NGROK] PUBLIC URL - SHARE THIS WITH FRIENDS:")
-            print("=" * 80)
-            print(f"   {public_url}")
-            print("=" * 80)
-            print(f"   API Base:     {public_url}")
-            print(f"   Socket URL:   {public_url}")
-            print("=" * 80)
-            print("\n")
+            # Log a concise ngrok info line instead of large ASCII banner
+            logger.info("NGROK public URL: %s", public_url)
+            logger.info("API Base: %s | Socket URL: %s", public_url, public_url)
+            # expose to app config for other modules
         else:
-            logging.info("Ngrok disabled (ENABLE_NGROK not set to 'true'). Running local only.")
+            logger.info("Ngrok disabled (ENABLE_NGROK not set to 'true'). Running local only.")
     except Exception as e:
         # Keep the exception visible in logs but don't let ngrok failure stop the server.
-        print(f"[WARNING] Ngrok connection failed: {e}")
-        logging.info("Running without ngrok tunnel - you can access via http://localhost:<port>")
+        logger.exception("Ngrok connection failed: %s", str(e))
+        logger.info("Running without ngrok tunnel - you can access via http://localhost:<port>")
     # Allow choosing a port/host via environment variables to avoid 'address already in use'
     # `port` was already read above for ngrok; fall back if not present
     try:

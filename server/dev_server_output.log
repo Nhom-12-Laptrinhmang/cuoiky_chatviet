@@ -1,0 +1,100 @@
+2025-11-17 17:47:48,541 INFO __main__: Ngrok disabled (ENABLE_NGROK not set to 'true'). Running local only.
+ * Serving Flask app 'app'
+ * Debug mode: off
+2025-11-17 17:47:53,586 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=6N6Z1zlS-9CUCfLXAAAD
+2025-11-17 17:47:53,590 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=s7onDM-1ALfHF-BVAAAE
+2025-11-17 17:47:53,629 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=CbohieiDaaiLRbgTAAAG
+2025-11-17 17:47:54,348 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=aKMHeTYMpW-DwTPUAAAH
+2025-11-17 17:47:55,775 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=4b4etDTBeLmrAXtEAAAJ
+[REGISTER] username=test_bot_full_1763376624
+[REGISTER] success=True
+[REGISTER] user_id=29 token=... (truncated)
+[LOGIN] username=test_bot_full_1763376624
+[LOGIN] success=True
+[LOGIN] ✅ user_id=29
+2025-11-17 17:50:24,643 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=lnNkJbP8HC8ouevkAAAL
+2025-11-17 17:50:24,644 INFO sockets.chat_events: [CHAT][JOIN] sid=lnNkJbP8HC8ouevkAAAL data={'user_id': 29}
+2025-11-17 17:50:24,644 INFO sockets.chat_events: User joined room: user-29
+2025-11-17 17:50:24,644 INFO sockets.chat_events: [JOIN] END - SUCCESS user=29 room=user-29
+2025-11-17 17:50:24,644 INFO sockets.chat_events: [CHAT][DEBUG] incoming content repr='❤️' char_len=2 utf8_bytes=6
+[DEBUG SEND_MESSAGE] received sender=29 receiver=12 client_msg_id=cli_full_1763376624 content_repr='❤️'
+2025-11-17 17:50:24,645 WARNING sockets.chat_events: Block check skipped due to error (schema may be missing): (sqlite3.OperationalError) no such table: block
+[SQL: SELECT block.id AS block_id, block.user_id AS block_user_id, block.target_id AS block_target_id, block.created_at AS block_created_at 
+FROM block 
+WHERE block.user_id = ? AND block.target_id = ?
+ LIMIT ? OFFSET ?]
+[parameters: (12, 29, 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+[DEBUG SEND_MESSAGE] attempting to save to DB...
+[DEBUG SEND_MESSAGE] DB commit succeeded, msg.id= 312
+2025-11-17 17:50:24,648 INFO sockets.chat_events: Message saved to DB: message_id=312 timestamp=2025-11-17 10:50:24.646600
+2025-11-17 17:50:24,648 INFO sockets.chat_events: Emitted message_id=312 to user-12
+2025-11-17 17:50:25,654 INFO routes.messages: [MESSAGES] sender=29 receiver=12
+2025-11-17 17:50:25,659 INFO routes.messages: [MESSAGES] count=1
+[CHAT][NHẬN] [DISCONNECT] sid=lnNkJbP8HC8ouevkAAAL
+[CHAT][NHẬN] ✅ Removed user_id=29 from mapping
+[CHAT][GỬI] [DISCONNECT] END
+2025-11-17 17:50:28,667 ERROR werkzeug: Error on request:
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/werkzeug/serving.py", line 370, in run_wsgi
+    execute(self.server.app)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/werkzeug/serving.py", line 336, in execute
+    write(b"")
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/werkzeug/serving.py", line 261, in write
+    assert status_set is not None, "write() before start_response"
+AssertionError: write() before start_response
+[CHAT][NHẬN] [DISCONNECT] sid=CbohieiDaaiLRbgTAAAG
+[CHAT][GỬI] [DISCONNECT] END
+2025-11-17 17:58:39,259 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=t_a1T7ymcxuHAuX1AAAN
+2025-11-17 17:58:39,351 INFO routes.messages: [MESSAGES] sender=4 receiver=11
+2025-11-17 17:58:39,352 INFO routes.messages: [MESSAGES] count=9
+2025-11-17 17:58:39,803 INFO sockets.chat_events: [CHAT][JOIN] sid=t_a1T7ymcxuHAuX1AAAN data={'user_id': 4}
+2025-11-17 17:58:39,804 INFO sockets.chat_events: User joined room: user-4
+2025-11-17 17:58:39,804 INFO sockets.chat_events: [JOIN] END - SUCCESS user=4 room=user-4
+2025-11-17 17:58:39,856 INFO sockets.chat_events: [CHAT][JOIN] sid=t_a1T7ymcxuHAuX1AAAN data={'user_id': 4}
+2025-11-17 17:58:39,856 INFO sockets.chat_events: User joined room: user-4
+2025-11-17 17:58:39,856 INFO sockets.chat_events: [JOIN] END - SUCCESS user=4 room=user-4
+[CHAT][NHẬN] [TYPING] sender=4 receiver=11 typing=False
+[CHAT][GỬI] user_typing -> room=user-11
+[CHAT][NHẬN] [STICKER] sender=4 receiver=11 sticker_id=laugh1
+[CHAT][GỬI] ✅ Sticker saved to DB: message_id=313
+[CHAT][GỬI] 📋 Sending ACK for sticker to sender: {'client_message_id': 'client_1763377122057_qs3evzs5y', 'message_id': 313, 'status': 'sent'}
+[CHAT][GỬI] 📤 Emitting sticker to receiver room 'user-11'...
+[CHAT][GỬI] ✅ Sticker emitted to user-11
+[CHAT][GỬI] [STICKER] END - SUCCESS
+[CHAT][NHẬN] [TYPING] sender=4 receiver=11 typing=False
+[CHAT][GỬI] user_typing -> room=user-11
+[CHAT][NHẬN] [TYPING] sender=4 receiver=11 typing=False
+[CHAT][GỬI] user_typing -> room=user-11
+[CHAT][NHẬN] [TYPING] sender=4 receiver=11 typing=False
+[CHAT][GỬI] user_typing -> room=user-11
+[CHAT][NHẬN] [TYPING] sender=4 receiver=11 typing=True
+[CHAT][GỬI] user_typing -> room=user-11
+2025-11-17 17:58:47,386 INFO sockets.chat_events: [CHAT][DEBUG] incoming content repr='👍🖐️✋👎' char_len=5 utf8_bytes=18
+[CHAT][NHẬN] [TYPING] sender=4 receiver=11 typing=False
+[CHAT][GỬI] user_typing -> room=user-11
+[DEBUG SEND_MESSAGE] received sender=4 receiver=11 client_msg_id=client_1763377127377_6shil486s content_repr='👍🖐️✋👎'
+2025-11-17 17:58:47,389 WARNING sockets.chat_events: Block check skipped due to error (schema may be missing): (sqlite3.OperationalError) no such table: block
+[SQL: SELECT block.id AS block_id, block.user_id AS block_user_id, block.target_id AS block_target_id, block.created_at AS block_created_at 
+FROM block 
+WHERE block.user_id = ? AND block.target_id = ?
+ LIMIT ? OFFSET ?]
+[parameters: (11, 4, 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+[DEBUG SEND_MESSAGE] attempting to save to DB...
+[DEBUG SEND_MESSAGE] DB commit succeeded, msg.id= 314
+2025-11-17 17:58:47,394 INFO sockets.chat_events: Message saved to DB: message_id=314 timestamp=2025-11-17 10:58:47.391109
+2025-11-17 17:58:47,395 INFO sockets.chat_events: Emitted message_id=314 to user-11
+2025-11-17 17:58:50,829 INFO sockets.chat_events: [CHAT][DEBUG] incoming content repr='😍' char_len=1 utf8_bytes=4
+[DEBUG SEND_MESSAGE] received sender=4 receiver=11 client_msg_id=client_1763377130825_4v0eyconh content_repr='😍'
+2025-11-17 17:58:50,833 WARNING sockets.chat_events: Block check skipped due to error (schema may be missing): (sqlite3.OperationalError) no such table: block
+[SQL: SELECT block.id AS block_id, block.user_id AS block_user_id, block.target_id AS block_target_id, block.created_at AS block_created_at 
+FROM block 
+WHERE block.user_id = ? AND block.target_id = ?
+ LIMIT ? OFFSET ?]
+[parameters: (11, 4, 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+[DEBUG SEND_MESSAGE] attempting to save to DB...
+[DEBUG SEND_MESSAGE] DB commit succeeded, msg.id= 315
+2025-11-17 17:58:50,839 INFO sockets.chat_events: Message saved to DB: message_id=315 timestamp=2025-11-17 10:58:50.834536
+2025-11-17 17:58:50,840 INFO sockets.chat_events: Emitted message_id=315 to user-11
