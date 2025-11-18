@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI, userAPI } from '../../services/api';
 import { initializeSocket, joinUserRoom } from '../../services/socket';
+import { useLanguage } from '../../i18n/LanguageContext';
+import LanguageSelector from '../Common/LanguageSelector';
 
 /**
  * LoginForm - Component đăng nhập
  * Gọi API /login, lưu JWT token, điều hướng tới /chat
  */
 const LoginForm = () => {
+  const { t } = useLanguage();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -64,30 +67,33 @@ const LoginForm = () => {
 
   return (
     <div className="auth-container">
+      <div style={{ position: 'absolute', top: 20, right: 20 }}>
+        <LanguageSelector compact />
+      </div>
       <div className="auth-box">
-        <h1>🔐 Đăng Nhập </h1>
+        <h1>🔐 {t('login')}</h1>
         <form onSubmit={handleLogin}>
           <div className="form-group">
-            <label htmlFor="username">Tên đăng nhập:</label>
+            <label htmlFor="username">{t('username')}:</label>
             <input
               type="text"
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Nhập tên đăng nhập"
+              placeholder={t('username')}
               required
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Mật khẩu:</label>
+            <label htmlFor="password">{t('password')}:</label>
             <div style={{ position: 'relative' }}>
               <input
                 type={showPassword ? 'text' : 'password'}
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Nhập mật khẩu"
+                placeholder={t('password')}
                 required
                 style={{ paddingRight: '36px' }}
               />
@@ -115,22 +121,22 @@ const LoginForm = () => {
                 onChange={(e) => setRemember(e.target.checked)}
                 style={{ width: 'auto', display: 'inline-block', padding: 0, margin: 0 }}
               />
-              <label onClick={() => setRemember(!remember)} style={{ margin: 0, cursor: 'pointer', fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap' }}>Ghi nhớ đăng nhập</label>
+              <label onClick={() => setRemember(!remember)} style={{ margin: 0, cursor: 'pointer', fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap' }}>{t('rememberMe')}</label>
             </div>
           </div>
 
           {error && <div className="error-message">{error}</div>}
 
           <button type="submit" disabled={loading} className="btn-primary">
-            {loading ? 'Đang đăng nhập...' : 'Đăng Nhập'}
+            {loading ? t('loading') : t('loginButton')}
           </button>
         </form>
 
         <p className="auth-links">
-          Chưa có tài khoản? <a href="/register">Đăng ký ngay</a>
+          {t('dontHaveAccount')} <a href="/register">{t('register')}</a>
         </p>
         <p className="auth-links">
-          Quên mật khẩu? <a href="/forgot-password">Khôi phục tại đây</a>
+          {t('forgotPassword')}? <a href="/forgot-password">{t('resetPassword')}</a>
         </p>
       </div>
     </div>

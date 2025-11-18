@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { changePassword, enable2FA, disable2FA, getSessions } from '../services/settingsService';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import SettingToggle from './common/SettingToggle';
 
 const SecuritySettings = () => {
+  const { t } = useLanguage();
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [sessions, setSessions] = useState([]);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -89,23 +91,20 @@ const SecuritySettings = () => {
 
   return (
     <div className="settings-section">
-      <h3>Security Settings</h3>
+      <h3>{t('securitySettings')}</h3>
       {error && <div className="settings-error">{error}</div>}
       {success && <div className="settings-success">{success}</div>}
       
       <div className="settings-group">
-        <h4>Password</h4>
+        <h4>{t('password').toUpperCase()}</h4>
         {!showPasswordForm ? (
-          <button 
-            className="btn-primary"
-            onClick={() => setShowPasswordForm(true)}
-          >
-            Change Password
+          <button onClick={() => setShowPasswordForm(true)} className="btn-primary">
+            {t('changePassword')}
           </button>
         ) : (
           <form onSubmit={handlePasswordChange} className="password-form">
             <div className="form-group">
-              <label>Current Password</label>
+              <label>{t('currentPassword')}</label>
               <input
                 type="password"
                 value={passwordForm.currentPassword}
@@ -114,7 +113,7 @@ const SecuritySettings = () => {
               />
             </div>
             <div className="form-group">
-              <label>New Password</label>
+              <label>{t('newPassword')}</label>
               <input
                 type="password"
                 value={passwordForm.newPassword}
@@ -124,7 +123,7 @@ const SecuritySettings = () => {
               />
             </div>
             <div className="form-group">
-              <label>Confirm New Password</label>
+              <label>{t('confirmPassword')}</label>
               <input
                 type="password"
                 value={passwordForm.confirmPassword}
@@ -135,7 +134,7 @@ const SecuritySettings = () => {
             </div>
             <div className="form-actions">
               <button type="submit" className="btn-primary" disabled={loading}>
-                {loading ? 'Changing...' : 'Change Password'}
+                {loading ? t('loading') : t('changePassword')}
               </button>
               <button 
                 type="button" 
@@ -146,7 +145,7 @@ const SecuritySettings = () => {
                   setError(null);
                 }}
               >
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </form>
@@ -154,17 +153,17 @@ const SecuritySettings = () => {
       </div>
 
       <div className="settings-group">
-        <h4>Two-Factor Authentication</h4>
+        <h4>{t('twoFactor').toUpperCase()}</h4>
         <SettingToggle
-          label="Enable 2FA"
-          description="Add an extra layer of security to your account"
+          label={t('twoFactor')}
+          description={t('twoFactorDesc')}
           checked={twoFactorEnabled}
           onChange={handle2FAToggle}
         />
       </div>
 
       <div className="settings-group">
-        <h4>Active Sessions</h4>
+        <h4>{t('activeSessions').toUpperCase()}</h4>
         <div className="sessions-list">
           {sessions.map(session => (
             <div key={session.id} className="session-item">
@@ -179,11 +178,11 @@ const SecuritySettings = () => {
                   className="btn-logout"
                   onClick={() => handleLogoutSession(session.id)}
                 >
-                  Logout
+                  {t('logout')}
                 </button>
               )}
               {session.current && (
-                <span className="current-session-badge">Current</span>
+                <span className="current-session-badge">{t('currentSession')}</span>
               )}
             </div>
           ))}

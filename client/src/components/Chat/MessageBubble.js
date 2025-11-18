@@ -28,6 +28,13 @@ const formatFileSize = (bytes) => {
  */
 const MessageBubble = ({ message, isSent, onReply, onReaction, onEmojiHover, onRetry }) => {
   const [showActions, setShowActions] = useState(false);
+  // Detect if this message renders an image/sticker so we can remove
+  // the surrounding bubble background (prevent the purple frame).
+  const msgUrl = message?.file_url || message?.sticker_url || '';
+  const msgType = message?.file_type || message?.message_type || '';
+  const isImageByType = typeof msgType === 'string' && msgType.startsWith && msgType.startsWith('image/');
+  const isImageByExt = typeof msgUrl === 'string' && msgUrl.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i);
+  const isImageMessage = isImageByType || isImageByExt || message?.message_type === 'sticker';
 
   // Parse server timestamp robustly and format to local time
   const formatMessageTime = (ts) => {
@@ -59,9 +66,11 @@ const MessageBubble = ({ message, isSent, onReply, onReaction, onEmojiHover, onR
   const emoticons = ['❤️', '😂', '😮', '😢', '🔥', '👍'];
 
   return (
-    <div className={`message-bubble ${isSent ? 'sent' : 'received'} ${message.message_type === 'sticker' ? 'sticker-bubble' : ''}`}
+    <div
+      className={`message-bubble ${isSent ? 'sent' : 'received'} ${message.message_type === 'sticker' ? 'sticker-bubble' : ''}`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
+      style={isImageMessage ? { background: 'transparent', padding: 0, borderRadius: 0, border: 'none' } : {}}
     >
       {/* Show quoted message if this is a reply */}
       {message.reply_to_id && (

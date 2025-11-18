@@ -21,6 +21,25 @@ const EditProfileModal = ({ isOpen, onClose, user, onSaved, onBack }) => {
     setFile(null);
   }, [user, isOpen]);
 
+  // Build absolute avatar URL (fallback to axios baseURL or window.location.origin)
+  const buildAvatarSrc = (avatar_url) => {
+    try {
+      if (!avatar_url) return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName||user?.username||'U')}&background=ffffff&color=0b5ed7`;
+      if (typeof avatar_url === 'string') {
+        if (avatar_url.startsWith('data:')) return avatar_url;
+        if (avatar_url.startsWith('http://') || avatar_url.startsWith('https://')) return avatar_url;
+        if (avatar_url.startsWith('//')) return `${window.location.protocol}${avatar_url}`;
+        const base = (api && api.defaults && api.defaults.baseURL) ? String(api.defaults.baseURL).replace(/\/$/, '') : (typeof window !== 'undefined' && window.location ? window.location.origin : '');
+        if (String(avatar_url).startsWith('/')) {
+          return base ? `${base}${avatar_url}` : avatar_url;
+        }
+        return base ? `${base}/${avatar_url}` : `/${avatar_url}`;
+      }
+    } catch (e) {
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName||user?.username||'U')}&background=ffffff&color=0b5ed7`;
+    }
+  };
+
   if (!isOpen) return null;
 
   const onFileChange = (e) => {
@@ -49,7 +68,41 @@ const EditProfileModal = ({ isOpen, onClose, user, onSaved, onBack }) => {
       if (birthdate) payload.birthdate = birthdate;
       if (phoneNumber) payload.phone_number = phoneNumber;
       const resp = await userAPI.updateMe(payload);
-      onSaved && onSaved(resp.data);
+      try {
+        // Build absolute URL and cache-bust so reload shows updated image immediately
+        const buildAvatarSrcLocal = (avatar_url) => {
+          try {
+            if (!avatar_url) return '';
+            if (typeof avatar_url === 'string') {
+              if (avatar_url.startsWith('data:')) return avatar_url;
+              if (avatar_url.startsWith('http://') || avatar_url.startsWith('https://')) return avatar_url;
+              if (avatar_url.startsWith('//')) return `${window.location.protocol}${avatar_url}`;
+              const base = (api && api.defaults && api.defaults.baseURL) ? String(api.defaults.baseURL).replace(/\/$/, '') : (typeof window !== 'undefined' && window.location ? window.location.origin : '');
+              if (String(avatar_url).startsWith('/')) {
+                return base ? `${base}${avatar_url}` : avatar_url;
+              }
+              return base ? `${base}/${avatar_url}` : `/${avatar_url}`;
+            }
+          } catch (e) { return avatar_url; }
+        };
+
+        const cacheBustLocal = (url) => {
+          try {
+            if (!url || typeof url !== 'string') return url;
+            if (url.startsWith('data:')) return url;
+            const ts = Date.now();
+            const cleaned = url.replace(/([?&])t=\d+(&)?/, (m, p1, p2) => (p2 ? p1 : ''));
+            return cleaned + (cleaned.includes('?') ? '&' : '?') + 't=' + ts;
+          } catch (e) { return url; }
+        };
+
+        const finalAvatar = resp?.data?.avatar_url ? cacheBustLocal(buildAvatarSrcLocal(resp.data.avatar_url)) : avatarPreview;
+        // ensure the saved profile contains the cache-busted avatar_url so reload shows it immediately
+        const saveProfile = Object.assign({}, resp.data, { avatar_url: finalAvatar });
+        profileSync.saveLocalProfile(String(resp.data.id || resp.data.user_id || user?.id), saveProfile);
+        // pass the modified profile back to caller so UI updates immediately
+        onSaved && onSaved(saveProfile);
+      } catch (e) {}
       // show polished success toast
       showToast('Cập nhật thành công', 'Thông tin cá nhân của bạn đã được cập nhật.', { variant: 'success', icon: '✓' });
       showSystemNotification('Cập nhật thành công', 'Thông tin cá nhân của bạn đã được cập nhật.');
@@ -117,7 +170,7 @@ const EditProfileModal = ({ isOpen, onClose, user, onSaved, onBack }) => {
         <div style={{display:'flex',gap:20}}>
           <div style={{width:200,display:'flex',flexDirection:'column',alignItems:'center'}}>
             <div style={{width:160,height:160,borderRadius:80,overflow:'hidden',background:'#f0f0f0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:48,color:'#333'}}>
-              {avatarPreview ? <img src={avatarPreview} alt="avatar" style={{width:'100%',height:'100%',objectFit:'cover'}} /> : (displayName ? displayName.split(' ').map(s=>s[0]).join('').toUpperCase() : (user?.username||'U')[0].toUpperCase())}
+              {avatarPreview ? <img src={buildAvatarSrc(avatarPreview)} alt="avatar" style={{width:'100%',height:'100%',objectFit:'cover'}} /> : (displayName ? displayName.split(' ').map(s=>s[0]).join('').toUpperCase() : (user?.username||'U')[0].toUpperCase())}
             </div>
             <div style={{marginTop:12}}>
               <label className="btn">Chọn ảnh<input type="file" accept="image/*" onChange={onFileChange} style={{display:'none'}} /></label>

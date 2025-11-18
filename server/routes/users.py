@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from models.user_model import User
 from config.database import db
 from services.auth_service import decode_token
@@ -240,6 +240,23 @@ def get_user_by_id(user_id):
         'mutuals': mutuals,
     }
 
+    # Include more profile fields so other users can view basic info and avatar.
+    # Previously these were only returned for /users/me which caused the UI to
+    # show empty values when viewing other users. Expose gender, birthdate and
+    # phone_number here as well (privacy policy may be applied later).
+    try:
+        profile['gender'] = getattr(user, 'gender', None)
+    except Exception:
+        profile['gender'] = None
+    try:
+        profile['birthdate'] = getattr(user, 'birthdate', None).isoformat() if getattr(user, 'birthdate', None) and hasattr(user.birthdate, 'isoformat') else (getattr(user, 'birthdate', None) if getattr(user, 'birthdate', None) else None)
+    except Exception:
+        profile['birthdate'] = None
+    try:
+        profile['phone_number'] = getattr(user, 'phone_number', None)
+    except Exception:
+        profile['phone_number'] = None
+
     return jsonify(profile), 200
 
 
@@ -256,6 +273,52 @@ def search_users():
         (User.username.ilike(like)) | (getattr(User, 'display_name', User.username).ilike(like))
     ).limit(50).all()
     return jsonify([{'id': u.id, 'username': u.username, 'display_name': (u.display_name or u.username), 'avatar_url': u.avatar_url, 'status': u.status} for u in results])
+
+@users_bp.route('/admin/rebroadcast_profiles', methods=['POST'])
+def rebroadcast_profiles():
+    """Developer helper: re-emit PROFILE_UPDATED for all users.
+
+    This endpoint is intentionally limited to localhost or when an
+    ADMIN_SECRET header matches the environment variable ADMIN_SECRET.
+    Use it to force clients to receive profile updates if they missed
+    the original emits (for example, because they were disconnected).
+    """
+    import os
+    from flask import current_app
+
+    # very small security gate: only allow from localhost or with secret
+    remote = request.remote_addr or ''
+    secret = request.headers.get('X-ADMIN-SECRET')
+    if remote not in ('127.0.0.1', '::1') and secret != os.environ.get('ADMIN_SECRET'):
+        return jsonify({'error': 'Forbidden'}), 403
+
+    try:
+        from app import socketio
+        users = User.query.all()
+        for u in users:
+            payload = {
+                'event': 'PROFILE_UPDATED',
+                'data': {
+                    'id': u.id,
+                    'username': u.username,
+                    'display_name': u.display_name if getattr(u, 'display_name', None) else u.username,
+                    'avatar_url': u.avatar_url,
+                    'status': u.status,
+                }
+            }
+            try:
+                current_app.logger.info(f"[ADMIN] broadcasting PROFILE_UPDATED for user {u.id}")
+                # broadcast to all connected clients
+                socketio.emit('contact_updated', payload)
+            except Exception as e:
+                current_app.logger.exception(f"[ADMIN] failed to emit for user {u.id}: {e}")
+        return jsonify({'ok': True, 'count': len(users)})
+    except Exception as e:
+        try:
+            current_app.logger.exception(f"[ADMIN] rebroadcast failed: {e}")
+        except Exception:
+            pass
+        return jsonify({'error': 'Internal error', 'detail': str(e)}), 500
 
 
 @users_bp.route('/suggestions', methods=['GET'])

@@ -237,6 +237,65 @@ def upload_avatar():
     # Return a URL that the client can fetch from the server
     # We'll expose a simple GET /uploads/files/<filename> route below
     avatar_url = f'/uploads/files/{filename}'
+    # If upload request included an authenticated user, persist avatar_url
+    if user_id:
+        try:
+            # Import here to avoid circular imports at module import time
+            from models.user_model import User
+            from config.database import db
+            user = User.query.get(user_id)
+            if user:
+                user.avatar_url = avatar_url
+                db.session.add(user)
+                db.session.commit()
+                try:
+                    # Notify friends and the user's own rooms about profile update
+                    from app import socketio
+                    from models.friend_model import Friend
+
+                    outgoing = Friend.query.filter_by(user_id=user.id, status='accepted').all() or []
+                    incoming = Friend.query.filter_by(friend_id=user.id, status='accepted').all() or []
+                    friend_ids = set()
+                    for f in outgoing:
+                        friend_ids.add(f.friend_id)
+                    for f in incoming:
+                        friend_ids.add(f.user_id)
+
+                    payload = {
+                        'event': 'PROFILE_UPDATED',
+                        'data': {
+                            'id': user.id,
+                            'username': user.username,
+                            'display_name': user.display_name if getattr(user, 'display_name', None) else user.username,
+                            'avatar_url': user.avatar_url,
+                            'status': user.status,
+                        }
+                    }
+
+                    # Emit to the user's own room and to each friend's room
+                    try:
+                        socketio.emit('contact_updated', payload, room=f'user-{user.id}')
+                    except Exception:
+                        pass
+                    for fid in friend_ids:
+                        try:
+                            socketio.emit('contact_updated', payload, room=f'user-{fid}')
+                        except Exception:
+                            pass
+                    # Fallback broadcast to all connected clients
+                    try:
+                        socketio.emit('contact_updated', payload)
+                    except Exception:
+                        pass
+                except Exception:
+                    # best-effort only
+                    current_app.logger.debug('[UPLOADS] realtime notify failed')
+        except Exception as e:
+            try:
+                current_app.logger.exception(f"[UPLOADS] Failed to persist avatar to user {user_id}: {e}")
+            except Exception:
+                pass
+
     return jsonify({'avatar_url': avatar_url})
 
 

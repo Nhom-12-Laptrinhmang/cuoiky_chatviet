@@ -6,6 +6,7 @@ from models.message_reaction_model import MessageReaction
 from models.friend_model import Friend
 from models.block_model import Block
 from models.contact_sync_model import ContactSync
+from models.group_model import Group, GroupMember
 from config.database import db
 import logging
 from services.auth_service import decode_token
@@ -255,6 +256,7 @@ def register_chat_events(socketio):
         """Handle 1:1 messages with support for reply_to, forward_from, reactions."""
         sender_id = data.get('sender_id')
         receiver_id = data.get('receiver_id')
+        group_id = data.get('group_id')
         content = data.get('content')
         client_message_id = data.get('client_message_id')  # For ACK tracking
         reply_to_id = data.get('reply_to_id')  # Message ID being replied to
@@ -276,7 +278,8 @@ def register_chat_events(socketio):
         content_is_none = content is None
         content_is_empty_str = isinstance(content, str) and content.strip() == ''
 
-        if not sender_id or not receiver_id or content_is_none or content_is_empty_str:
+        # Require either a receiver_id (1:1) or a group_id (group message)
+        if not sender_id or (not receiver_id and not group_id) or content_is_none or content_is_empty_str:
             logger.warning("Missing required fields for send_message: sender=%s receiver=%s content_repr=%r empty=%s none=%s",
                            sender_id, receiver_id, content, content_is_empty_str, content_is_none)
             return
@@ -284,38 +287,58 @@ def register_chat_events(socketio):
         try:
             # Debug prints to stdout to make failures visible in dev terminal
             print(f"[DEBUG SEND_MESSAGE] received sender={sender_id} receiver={receiver_id} client_msg_id={client_message_id} content_repr={repr(content)}")
-            # Check block list: TWO-WAY check
-            # Kiểm tra: (1) receiver đã chặn sender, (2) sender đã chặn receiver
-            try:
-                blocked_by_receiver = Block.query.filter_by(user_id=receiver_id, target_id=sender_id).first()
-                blocked_by_sender = Block.query.filter_by(user_id=sender_id, target_id=receiver_id).first()
-            except Exception as e:
-                logger.warning("Block check skipped due to error (schema may be missing): %s", e)
-                blocked_by_receiver = None
-                blocked_by_sender = None
-            
-            if blocked_by_receiver or blocked_by_sender:
-                logger.info("Block detected - rejecting send (blocked_by_receiver=%s, blocked_by_sender=%s)", bool(blocked_by_receiver), bool(blocked_by_sender))
-                # Inform sender that message was blocked and include a human-friendly reason
-                if client_message_id:
-                    if blocked_by_receiver and not blocked_by_sender:
-                        blocked_message = 'Hiện tại bạn không thể gửi tin nhắn cho người này vì họ đã chặn bạn.'
-                    elif blocked_by_sender and not blocked_by_receiver:
-                        blocked_message = 'Bạn đã chặn người này, nên không thể gửi tin nhắn cho họ.'
-                    else:
-                        blocked_message = 'Tin nhắn bị chặn.'
-                    ack_data = {
-                        'client_message_id': client_message_id,
-                        'status': 'blocked',
-                        'blocked_message': blocked_message,
-                        'blocked_by_receiver': bool(blocked_by_receiver),
-                        'blocked_by_sender': bool(blocked_by_sender),
-                    }
-                    socketio.emit('message_sent_ack', ack_data, room=request.sid)
-                return
+            # Check block list for 1:1 messages only. For group messages we'll still allow save
+            if not group_id:
+                try:
+                    blocked_by_receiver = Block.query.filter_by(user_id=receiver_id, target_id=sender_id).first()
+                    blocked_by_sender = Block.query.filter_by(user_id=sender_id, target_id=receiver_id).first()
+                except Exception as e:
+                    logger.warning("Block check skipped due to error (schema may be missing): %s", e)
+                    blocked_by_receiver = None
+                    blocked_by_sender = None
+                
+                if blocked_by_receiver or blocked_by_sender:
+                    logger.info("Block detected - rejecting send (blocked_by_receiver=%s, blocked_by_sender=%s)", bool(blocked_by_receiver), bool(blocked_by_sender))
+                    # Inform sender that message was blocked and include a human-friendly reason
+                    if client_message_id:
+                        if blocked_by_receiver and not blocked_by_sender:
+                            blocked_message = 'Hiện tại bạn không thể gửi tin nhắn cho người này vì họ đã chặn bạn.'
+                        elif blocked_by_sender and not blocked_by_receiver:
+                            blocked_message = 'Bạn đã chặn người này, nên không thể gửi tin nhắn cho họ.'
+                        else:
+                            blocked_message = 'Tin nhắn bị chặn.'
+                        ack_data = {
+                            'client_message_id': client_message_id,
+                            'status': 'blocked',
+                            'blocked_message': blocked_message,
+                            'blocked_by_receiver': bool(blocked_by_receiver),
+                            'blocked_by_sender': bool(blocked_by_sender),
+                        }
+                        socketio.emit('message_sent_ack', ack_data, room=request.sid)
+                    return
             # Save message to DB
             print('[DEBUG SEND_MESSAGE] attempting to save to DB...')
-            msg = Message(sender_id=sender_id, receiver_id=receiver_id, content=content)
+            # If this is a group message, validate group and membership
+            if group_id:
+                try:
+                    gid = int(group_id)
+                except Exception:
+                    logger.warning('Invalid group_id provided: %s', group_id)
+                    return
+                grp = Group.query.get(gid)
+                if not grp:
+                    logger.warning('Group not found: %s', gid)
+                    return
+                # verify sender is a member
+                is_member = GroupMember.query.filter_by(group_id=gid, user_id=int(sender_id)).first()
+                if not is_member:
+                    logger.warning('Sender %s is not a member of group %s', sender_id, gid)
+                    return
+                # use group's owner as receiver_id placeholder (DB requires receiver_id non-null)
+                receiver_for_db = grp.owner_id or int(sender_id)
+                msg = Message(sender_id=sender_id, receiver_id=receiver_for_db, content=content, group_id=gid)
+            else:
+                msg = Message(sender_id=sender_id, receiver_id=receiver_id, content=content)
             db.session.add(msg)
             db.session.commit()
             print('[DEBUG SEND_MESSAGE] DB commit succeeded, msg.id=', getattr(msg, 'id', None))
@@ -364,6 +387,17 @@ def register_chat_events(socketio):
             'reply_to_id': reply_to_id,
             'forward_from_id': forward_from_id,
         }
+        # include sender profile info (avatar, display name) to help clients render immediately
+        try:
+            s_user = User.query.get(int(sender_id)) if sender_id else None
+            if s_user:
+                message_data['sender_avatar_url'] = s_user.avatar_url
+                message_data['sender_username'] = s_user.username
+                message_data['sender_name'] = s_user.display_name or s_user.username
+        except Exception:
+            pass
+        if group_id:
+            message_data['group_id'] = int(group_id)
 
         # Send ACK back to sender (to confirm message saved with real ID)
         if client_message_id:
@@ -371,14 +405,27 @@ def register_chat_events(socketio):
             socketio.emit('message_sent_ack', ack_data, room=request.sid)
             logger.debug("Sent ACK to sender: %s", ack_data)
 
-        # Broadcast to receiver's room
-        receiver_room = f'user-{receiver_id}'
-        logger.debug("Emitting to receiver room '%s'", receiver_room)
-        try:
-            socketio.emit('receive_message', message_data, room=receiver_room)
-            logger.info("Emitted message_id=%s to %s", msg.id, receiver_room)
-        except Exception as e:
-            logger.exception("Error emitting to %s: %s", receiver_room, str(e))
+        # Broadcast: if group message, emit to all group members; otherwise emit to single receiver
+        if group_id:
+            try:
+                members = GroupMember.query.filter_by(group_id=int(group_id)).all()
+                for m in members:
+                    try:
+                        room = f'user-{m.user_id}'
+                        socketio.emit('receive_message', message_data, room=room)
+                    except Exception:
+                        logger.exception('Error emitting group message to user %s in group %s', m.user_id, group_id)
+                logger.info('Emitted group message_id=%s to group %s members count=%s', msg.id, group_id, len(members))
+            except Exception:
+                logger.exception('Error broadcasting group message for group %s', group_id)
+        else:
+            receiver_room = f'user-{receiver_id}'
+            logger.debug("Emitting to receiver room '%s'", receiver_room)
+            try:
+                socketio.emit('receive_message', message_data, room=receiver_room)
+                logger.info("Emitted message_id=%s to %s", msg.id, receiver_room)
+            except Exception as e:
+                logger.exception("Error emitting to %s: %s", receiver_room, str(e))
 
         logger.debug("[SEND_MESSAGE] END - SUCCESS sender=%s receiver=%s message_id=%s", sender_id, receiver_id, msg.id)
 
@@ -416,8 +463,14 @@ def register_chat_events(socketio):
             msg = Message.query.get(message_id)
             target_rooms = set()
             if msg:
-                target_rooms.add(f'user-{msg.sender_id}')
-                target_rooms.add(f'user-{msg.receiver_id}')
+                if msg.group_id:
+                    # emit to all group members
+                    members = GroupMember.query.filter_by(group_id=msg.group_id).all()
+                    for m in members:
+                        target_rooms.add(f'user-{m.user_id}')
+                else:
+                    target_rooms.add(f'user-{msg.sender_id}')
+                    target_rooms.add(f'user-{msg.receiver_id}')
             else:
                 target_rooms = None
 
@@ -445,27 +498,53 @@ def register_chat_events(socketio):
         """Handle sticker messages (Giphy, EmojiOne, Twemoji, custom pack)."""
         sender_id = data.get('sender_id')
         receiver_id = data.get('receiver_id')
+        group_id = data.get('group_id')
         sticker_id = data.get('sticker_id')  # Giphy ID or custom pack ID
         sticker_url = data.get('sticker_url')  # URL for sticker image
         client_message_id = data.get('client_message_id')
         
         print(f"[CHAT][NHẬN] [STICKER] sender={sender_id} receiver={receiver_id} sticker_id={sticker_id}")
         
-        if not sender_id or not receiver_id or not sticker_url:
+        if not sender_id or (not receiver_id and not group_id) or not sticker_url:
             print(f"[ERROR] Missing required fields for sticker")
             print("[STICKER] END - FAILED\n")
             return
         
         try:
-            # Save sticker message to DB
-            msg = Message(
-                sender_id=sender_id,
-                receiver_id=receiver_id,
-                content=sticker_url,
-                message_type='sticker',
-                sticker_id=sticker_id,
-                sticker_url=sticker_url
-            )
+            # Save sticker message to DB (support group)
+            if group_id:
+                try:
+                    gid = int(group_id)
+                except Exception:
+                    print('[STICKER] invalid group_id')
+                    return
+                grp = Group.query.get(gid)
+                if not grp:
+                    print('[STICKER] group not found')
+                    return
+                is_member = GroupMember.query.filter_by(group_id=gid, user_id=int(sender_id)).first()
+                if not is_member:
+                    print('[STICKER] sender not member of group')
+                    return
+                receiver_for_db = grp.owner_id or int(sender_id)
+                msg = Message(
+                    sender_id=sender_id,
+                    receiver_id=receiver_for_db,
+                    content=sticker_url,
+                    message_type='sticker',
+                    sticker_id=sticker_id,
+                    sticker_url=sticker_url,
+                    group_id=gid
+                )
+            else:
+                msg = Message(
+                    sender_id=sender_id,
+                    receiver_id=receiver_id,
+                    content=sticker_url,
+                    message_type='sticker',
+                    sticker_id=sticker_id,
+                    sticker_url=sticker_url
+                )
             db.session.add(msg)
             db.session.commit()
             print(f"[CHAT][GỬI] ✅ Sticker saved to DB: message_id={msg.id}")
@@ -486,6 +565,14 @@ def register_chat_events(socketio):
             'timestamp': msg.timestamp.isoformat(),
             'status': 'sent',
         }
+        try:
+            s_user = User.query.get(int(sender_id)) if sender_id else None
+            if s_user:
+                sticker_data['sender_avatar_url'] = s_user.avatar_url
+                sticker_data['sender_username'] = s_user.username
+                sticker_data['sender_name'] = s_user.display_name or s_user.username
+        except Exception:
+            pass
         
         # Send ACK back to sender
         if client_message_id:
@@ -497,14 +584,23 @@ def register_chat_events(socketio):
             print(f"[CHAT][GỬI] 📋 Sending ACK for sticker to sender: {ack_data}")
             socketio.emit('message_sent_ack', ack_data, room=request.sid)
         
-        # Broadcast to receiver's room
-        receiver_room = f'user-{receiver_id}'
-        print(f"[CHAT][GỬI] 📤 Emitting sticker to receiver room '{receiver_room}'...")
-        try:
-            socketio.emit('receive_message', sticker_data, room=receiver_room)
-            print(f"[CHAT][GỬI] ✅ Sticker emitted to {receiver_room}")
-        except Exception as e:
-            print(f"[ERROR] ❌ ERROR emitting sticker to {receiver_room}: {e}")
+        # Broadcast: group -> all members, otherwise single receiver
+        if group_id:
+            try:
+                members = GroupMember.query.filter_by(group_id=int(group_id)).all()
+                for m in members:
+                    socketio.emit('receive_message', sticker_data, room=f'user-{m.user_id}')
+                print(f"[CHAT][GỬI] ✅ Sticker emitted to group {group_id}")
+            except Exception as e:
+                print(f"[ERROR] ❌ ERROR emitting sticker to group {group_id}: {e}")
+        else:
+            receiver_room = f'user-{receiver_id}'
+            print(f"[CHAT][GỬI] 📤 Emitting sticker to receiver room '{receiver_room}'...")
+            try:
+                socketio.emit('receive_message', sticker_data, room=receiver_room)
+                print(f"[CHAT][GỬI] ✅ Sticker emitted to {receiver_room}")
+            except Exception as e:
+                print(f"[ERROR] ❌ ERROR emitting sticker to {receiver_room}: {e}")
         
         print("[CHAT][GỬI] [STICKER] END - SUCCESS")
 
@@ -515,6 +611,7 @@ def register_chat_events(socketio):
         """
         sender_id = data.get('sender_id')
         receiver_id = data.get('receiver_id')
+        group_id = data.get('group_id')
         file_url = data.get('file_url')
         file_name = data.get('file_name')
         file_size = data.get('file_size', 0)
@@ -524,7 +621,7 @@ def register_chat_events(socketio):
         logger.debug("[CHAT][RECV] send_file_message sid=%s sender=%s receiver=%s file=%s", 
                      request.sid, sender_id, receiver_id, file_name)
 
-        if not sender_id or not receiver_id or not file_url or not file_name:
+        if not sender_id or (not receiver_id and not group_id) or not file_url or not file_name:
             logger.warning("Missing required fields for send_file_message: sender=%s receiver=%s file_url=%s file_name=%s", 
                           sender_id, receiver_id, file_url, file_name)
             return
@@ -552,14 +649,38 @@ def register_chat_events(socketio):
                     socketio.emit('message_sent_ack', ack_data, room=request.sid)
                 return
 
-            # Save file message to DB
-            msg = Message(
-                sender_id=sender_id,
-                receiver_id=receiver_id,
-                content=file_name,
-                message_type='file',
-                file_url=file_url
-            )
+            # Save file message to DB (support group)
+            if group_id:
+                try:
+                    gid = int(group_id)
+                except Exception:
+                    logger.warning('Invalid group_id for file message: %s', group_id)
+                    return
+                grp = Group.query.get(gid)
+                if not grp:
+                    logger.warning('Group not found for file message: %s', gid)
+                    return
+                is_member = GroupMember.query.filter_by(group_id=gid, user_id=int(sender_id)).first()
+                if not is_member:
+                    logger.warning('Sender not member of group for file message: %s', sender_id)
+                    return
+                receiver_for_db = grp.owner_id or int(sender_id)
+                msg = Message(
+                    sender_id=sender_id,
+                    receiver_id=receiver_for_db,
+                    content=file_name,
+                    message_type='file',
+                    file_url=file_url,
+                    group_id=gid
+                )
+            else:
+                msg = Message(
+                    sender_id=sender_id,
+                    receiver_id=receiver_id,
+                    content=file_name,
+                    message_type='file',
+                    file_url=file_url
+                )
             db.session.add(msg)
             db.session.commit()
             logger.info("File message saved to DB: message_id=%s file=%s", msg.id, file_name)
@@ -585,6 +706,14 @@ def register_chat_events(socketio):
             'timestamp': msg.timestamp.isoformat(),
             'status': 'sent',
         }
+        try:
+            s_user = User.query.get(int(sender_id)) if sender_id else None
+            if s_user:
+                message_data['sender_avatar_url'] = s_user.avatar_url
+                message_data['sender_username'] = s_user.username
+                message_data['sender_name'] = s_user.display_name or s_user.username
+        except Exception:
+            pass
 
         # Send ACK back to sender
         if client_message_id:
@@ -592,14 +721,23 @@ def register_chat_events(socketio):
             socketio.emit('message_sent_ack', ack_data, room=request.sid)
             logger.debug("Sent ACK for file message to sender: %s", ack_data)
 
-        # Broadcast to receiver's room
-        receiver_room = f'user-{receiver_id}'
-        logger.debug("Emitting file message to receiver room '%s'", receiver_room)
-        try:
-            socketio.emit('receive_message', message_data, room=receiver_room)
-            logger.info("Emitted file message_id=%s to %s", msg.id, receiver_room)
-        except Exception as e:
-            logger.exception("Error emitting file message to %s: %s", receiver_room, str(e))
+        # Broadcast: group -> all members, otherwise single receiver
+        if group_id:
+            try:
+                members = GroupMember.query.filter_by(group_id=int(group_id)).all()
+                for m in members:
+                    socketio.emit('receive_message', message_data, room=f'user-{m.user_id}')
+                logger.info('Emitted file message_id=%s to group %s members=%s', msg.id, group_id, len(members))
+            except Exception:
+                logger.exception('Error emitting file message to group %s', group_id)
+        else:
+            receiver_room = f'user-{receiver_id}'
+            logger.debug("Emitting file message to receiver room '%s'", receiver_room)
+            try:
+                socketio.emit('receive_message', message_data, room=receiver_room)
+                logger.info("Emitted file message_id=%s to %s", msg.id, receiver_room)
+            except Exception as e:
+                logger.exception("Error emitting file message to %s: %s", receiver_room, str(e))
 
         logger.debug("[SEND_FILE_MESSAGE] END - SUCCESS sender=%s receiver=%s message_id=%s", sender_id, receiver_id, msg.id)
 
@@ -796,6 +934,28 @@ def register_chat_events(socketio):
         except Exception as e:
             print(f"[COMMAND] Error handling command: {e}")
             socketio.emit('command_response', {'status': 'ERROR', 'action': None, 'error': 'Server error'}, room=request.sid)
+
+    @socketio.on('group_created_notify')
+    def handle_group_created_notify(payload):
+        """Receive a client-side notification that a group was created and forward
+        a lightweight 'group_created_notify' event to the listed member rooms so
+        they can refresh their groups list.
+        Expected payload: { group_id, group_name, members: [id,..], created_by }
+        """
+        try:
+            if not payload or not isinstance(payload, dict):
+                return
+            members = payload.get('members') or []
+            group_id = payload.get('group_id')
+            group_name = payload.get('group_name') or payload.get('name')
+            for m in members:
+                try:
+                    # emit to each user's personal room
+                    socketio.emit('group_created_notify', {'group_id': group_id, 'group_name': group_name}, room=f'user-{m}')
+                except Exception:
+                    logger.exception('Error emitting group_created_notify to user %s', m)
+        except Exception:
+            logger.exception('Error in handle_group_created_notify')
 
     @socketio.on('edit_message')
     def handle_edit_message(data):

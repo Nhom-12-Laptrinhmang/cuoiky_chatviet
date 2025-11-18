@@ -43,16 +43,21 @@ const STICKER_PACKS = [
   },
 ];
 
-// convenience flat list for legacy code (not used directly for packs)
-const STICKERS = STICKER_PACKS.flatMap((p) => p.stickers);
+// (removed unused `STICKERS` flat list to satisfy linter warnings)
 
-// Emoji list by categories (English labels to be clear)
+// Emoji list by categories (cleaned and expanded)
+// Note: keep only valid emoji characters here to avoid malformed entries
 const EMOJIS = [
   { category: 'Recent', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂'] },
-  { category: 'Smileys & Emotion', emojis: ['😊', '😇', '🙂', '🙃', '😉', '😍', '🥰', '😘', '😋', '😛', '😜', '🤪', '', '😑', '', '', '😬', '🤥', '', '😴'] },
-  { category: 'Gestures', emojis: ['👋', '🤚', '🖐️', '✋', '', '🤌', '🤏', '✌️', '🤞', '', '🤘', '🤙', '👍', '👎', '✊', '👊', '👏', '🙌'] },
-  { category: 'Animals & Nature', emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '', '🐵', '🐒', '🦄', '�', '🦋'] },
-  { category: 'Food & Drink', emojis: ['🍎', '🍌', '🍇', '🍓', '🍕', '🍔', '🍟', '🍣', '🍩', '🍪', '☕', '🍺', '🍷', '🍜'] },
+  { category: 'Smileys & Emotion', emojis: ['😊', '😇', '🙂', '🙃', '😉', '😍', '🥰', '😘', '😋', '😛', '😜', '🤪', '😑', '�', '🤥', '😴', '🤗', '�', '🤭', '🤫'] },
+  { category: 'Gestures', emojis: ['👋', '🤚', '🖐️', '✋', '🤌', '🤏', '✌️', '🤞', '🤘', '🤙', '👍', '👎', '✊', '👊', '👏', '🙌', '🙏', '👌', '👈', '👉'] },
+  { category: 'People & Body', emojis: ['👶', '🧒', '👦', '👧', '🧑', '👨', '👩', '👴', '👵', '👮‍♂️', '👷‍♀️', '💂‍♂️', '🕵️‍♀️', '👩‍⚕️', '👨‍🍳', '🧑‍🏫'] },
+  { category: 'Animals & Nature', emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐵', '🐒', '🦄', '🐝', '🦋', '🌸', '🌞'] },
+  { category: 'Food & Drink', emojis: ['🍎', '🍌', '🍇', '🍓', '🍕', '🍔', '🍟', '🍣', '🍩', '🍪', '☕', '🍺', '🍷', '🍜', '🍱', '🍰', '🍫', '🍿'] },
+  { category: 'Activities', emojis: ['⚽', '🏀', '🏈', '🎾', '🏓', '🏸', '🏒', '🏹', '🎳', '🎮', '🎲'] },
+  { category: 'Travel & Places', emojis: ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '✈️', '🚀', '🏝️', '🏖️'] },
+  { category: 'Objects', emojis: ['📱', '💻', '⌚', '📷', '🎧', '🔑', '💡', '📦', '🔒', '🧸'] },
+  { category: 'Symbols', emojis: ['❤️', '💔', '💕', '✨', '🔥', '⭐', '⚡', '🎉', '✅', '❌'] },
 ];
 
 const StickerButton = ({ onSelectSticker, onAddEmoji }) => {
@@ -294,12 +299,8 @@ const StickerButton = ({ onSelectSticker, onAddEmoji }) => {
                         }
                         setOpen(false);
                       }}
-                      onMouseEnter={(e) => {
-                        e.target.style.transform = 'scale(1.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.transform = 'scale(1)';
-                      }}
+                      onMouseEnter={(e) => { try { e.currentTarget.style.transform = 'scale(1.1)'; } catch (err) {} }}
+                      onMouseLeave={(e) => { try { e.currentTarget.style.transform = 'scale(1)'; } catch (err) {} }}
                     />
                   ))}
                 </div>
@@ -345,12 +346,8 @@ const StickerButton = ({ onSelectSticker, onAddEmoji }) => {
                             borderRadius: 4,
                             transition: 'background 0.2s',
                           }}
-                          onMouseEnter={(e) => {
-                            e.target.style.background = '#f0f0f0';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.target.style.background = 'none';
-                          }}
+                          onMouseEnter={(e) => { try { e.currentTarget.style.background = '#f0f0f0'; } catch (err) {} }}
+                          onMouseLeave={(e) => { try { e.currentTarget.style.background = 'none'; } catch (err) {} }}
                           title={emoji}
                         >
                           {emoji}

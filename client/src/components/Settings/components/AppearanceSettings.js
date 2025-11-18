@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { getAppearanceSettings, updateAppearanceSettings } from '../services/settingsService';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import SettingToggle from './common/SettingToggle';
 import SettingSelect from './common/SettingSelect';
 
 const AppearanceSettings = () => {
+  const { t } = useLanguage();
   const [settings, setSettings] = useState({
     theme: 'auto',
     chatWallpaper: 'default',
@@ -39,21 +41,27 @@ const AppearanceSettings = () => {
 
   const applyTheme = (theme) => {
     const root = document.documentElement;
+    const body = document.body;
+    
+    // Remove both classes first
+    root.classList.remove('dark-theme', 'light-theme');
+    body.classList.remove('dark-theme', 'light-theme');
+    
     if (theme === 'dark') {
       root.classList.add('dark-theme');
-      root.classList.remove('light-theme');
+      body.classList.add('dark-theme');
     } else if (theme === 'light') {
       root.classList.add('light-theme');
-      root.classList.remove('dark-theme');
+      body.classList.add('light-theme');
     } else {
       // Auto - use system preference
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       if (prefersDark) {
         root.classList.add('dark-theme');
-        root.classList.remove('light-theme');
+        body.classList.add('dark-theme');
       } else {
         root.classList.add('light-theme');
-        root.classList.remove('dark-theme');
+        body.classList.add('light-theme');
       }
     }
   };
@@ -85,6 +93,8 @@ const AppearanceSettings = () => {
     // Apply theme change immediately
     if (key === 'theme') {
       applyTheme(value);
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: value } }));
     }
     
     try {
@@ -95,6 +105,7 @@ const AppearanceSettings = () => {
       setSettings(prev => ({ ...prev, [key]: oldValue }));
       if (key === 'theme') {
         applyTheme(oldValue);
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: oldValue } }));
       }
       setError(`Failed to update ${key}`);
       console.error('Error updating setting:', err);
@@ -102,41 +113,43 @@ const AppearanceSettings = () => {
   };
 
   if (loading) {
-    return <div className="settings-loading">Loading...</div>;
+    return <div className="settings-loading">{t('loading')}...</div>;
   }
 
   return (
     <div className="settings-section">
-      <h3>Appearance Settings</h3>
+      <h3>{t('appearanceSettings').toUpperCase()}</h3>
       {error && <div className="settings-error">{error}</div>}
       
       <div className="settings-group">
-        <h4>Theme</h4>
+        <h4>{t('theme').toUpperCase()}</h4>
         <SettingSelect
-          label="App theme"
+          label={t('darkMode')}
+          description={t('darkModeDesc')}
           value={settings.theme}
           options={[
-            { value: 'auto', label: 'Auto (System)' },
-            { value: 'light', label: 'Light' },
-            { value: 'dark', label: 'Dark' }
+            { value: 'auto', label: t('auto') + ' (System)' },
+            { value: 'light', label: t('light') },
+            { value: 'dark', label: t('dark') }
           ]}
           onChange={(value) => handleSelectChange('theme', value)}
         />
         <div className="theme-preview">
-          {settings.theme === 'light' && <div className="preview-light">☀️ Light Theme</div>}
-          {settings.theme === 'dark' && <div className="preview-dark">🌙 Dark Theme</div>}
-          {settings.theme === 'auto' && <div className="preview-auto">🔄 Auto (follows system)</div>}
+          {settings.theme === 'light' && <div className="preview-light">☀️ {t('light')} {t('theme')}</div>}
+          {settings.theme === 'dark' && <div className="preview-dark">🌙 {t('dark')} {t('theme')}</div>}
+          {settings.theme === 'auto' && <div className="preview-auto">🔄 {t('auto')} (follows system)</div>}
         </div>
       </div>
 
       <div className="settings-group">
-        <h4>Chat Appearance</h4>
+        <h4>CHAT APPEARANCE</h4>
         <SettingSelect
-          label="Chat wallpaper"
+          label={t('chatWallpaper')}
+          description={t('chatWallpaperDesc')}
           value={settings.chatWallpaper}
           options={[
-            { value: 'default', label: 'Default' },
-            { value: 'none', label: 'None' },
+            { value: 'default', label: t('default') },
+            { value: 'none', label: t('none') },
             { value: 'gradient1', label: 'Gradient Blue' },
             { value: 'gradient2', label: 'Gradient Purple' },
             { value: 'pattern1', label: 'Pattern 1' },
@@ -145,7 +158,8 @@ const AppearanceSettings = () => {
           onChange={(value) => handleSelectChange('chatWallpaper', value)}
         />
         <SettingSelect
-          label="Bubble style"
+          label={t('bubbleStyle')}
+          description={t('bubbleStyleDesc')}
           value={settings.bubbleStyle}
           options={[
             { value: 'rounded', label: 'Rounded' },
@@ -157,7 +171,7 @@ const AppearanceSettings = () => {
       </div>
 
       <div className="settings-group">
-        <h4>Display Options</h4>
+        <h4>DISPLAY OPTIONS</h4>
         <SettingToggle
           label="Show avatars in chat"
           description="Display profile pictures in conversations"
@@ -165,8 +179,8 @@ const AppearanceSettings = () => {
           onChange={() => handleToggle('showAvatars')}
         />
         <SettingToggle
-          label="Compact mode"
-          description="Reduce spacing for more content on screen"
+          label={t('compactMode')}
+          description={t('compactModeDesc')}
           checked={settings.compactMode}
           onChange={() => handleToggle('compactMode')}
         />
@@ -179,14 +193,14 @@ const AppearanceSettings = () => {
       </div>
 
       <div className="settings-group">
-        <h4>Emoji & Stickers</h4>
+        <h4>EMOJI & STICKERS</h4>
         <SettingSelect
           label="Emoji size"
           value={settings.emojiSize}
           options={[
-            { value: 'small', label: 'Small' },
-            { value: 'medium', label: 'Medium' },
-            { value: 'large', label: 'Large' }
+            { value: 'small', label: t('small') },
+            { value: 'medium', label: t('medium') },
+            { value: 'large', label: t('large') }
           ]}
           onChange={(value) => handleSelectChange('emojiSize', value)}
         />

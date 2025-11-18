@@ -1,7 +1,103 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import '../../styles/Toast.css';
 
 const Toast = ({ toast, onClose }) => {
-  const { title, message, variant, icon } = toast;
+  const { 
+    title, 
+    message, 
+    variant, 
+    icon, 
+    senderName: toastSenderName, 
+    senderAvatar: toastSenderAvatar, 
+    timestamp, 
+    duration = 7000 
+  } = toast;
+  
+  // Ưu tiên lấy từ toast props, fallback về title nếu là tin nhắn
+  const senderName = toastSenderName || (variant === 'message' ? title : null);
+  const senderAvatar = toastSenderAvatar;
+  
+  const [progress, setProgress] = useState(100);
+
+  useEffect(() => {
+    // Animation cho progress bar
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
+      setProgress(remaining);
+      
+      if (remaining === 0) {
+        clearInterval(interval);
+      }
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [duration]);
+
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now - date;
+
+    if (diff < 60000) return 'Vừa xong';
+    if (diff < 3600000) {
+      const minutes = Math.floor(diff / 60000);
+      return `${minutes} phút trước`;
+    }
+    return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const truncateMessage = (msg) => {
+    if (!msg) return '';
+    if (msg.length <= 100) return msg;
+    return msg.substring(0, 97) + '...';
+  };
+
+  // Toast cho tin nhắn (với avatar và thông tin người gửi)
+  if (variant === 'message' || senderName) {
+    return (
+      <div className="toast toast-message">
+        <button 
+          className="toast-close" 
+          onClick={() => onClose(toast.id)}
+          aria-label="Đóng thông báo"
+        >
+          ×
+        </button>
+
+        <div className="toast-content">
+          <div className="toast-avatar">
+            {senderAvatar ? (
+              <img src={senderAvatar} alt={senderName} />
+            ) : (
+              <div className="toast-avatar-placeholder">
+                {senderName?.charAt(0)?.toUpperCase() || 'U'}
+              </div>
+            )}
+          </div>
+
+          <div className="toast-details">
+            <div className="toast-header">
+              <span className="toast-sender">{senderName || 'Unknown'}</span>
+              {timestamp && <span className="toast-time">{formatTime(timestamp)}</span>}
+            </div>
+            <div className="toast-message-text">
+              {truncateMessage(message || title)}
+            </div>
+          </div>
+        </div>
+
+        <div className="toast-progress-bar">
+          <div 
+            className="toast-progress-fill"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (variant === 'success') {
     return (

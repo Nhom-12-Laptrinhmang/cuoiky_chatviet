@@ -1,5 +1,57 @@
 let listeners = [];
 
+// Cấu hình chế độ thông báo
+const NOTIFICATION_MODE_KEY = 'notifications_mode';
+const NOTIFICATION_GROUP_KEY = 'notifications_group_enabled';
+
+// Các chế độ hiển thị thông báo
+export const NOTIFICATION_MODES = {
+  SINGLE_LATEST: 'single_latest',    // Chỉ hiển thị 1 thông báo mới nhất (Facebook/Zalo style)
+  QUEUE: 'queue',                    // Hiển thị lần lượt từng thông báo
+  MULTIPLE: 'multiple'               // Hiển thị nhiều thông báo cùng lúc
+};
+
+// Lấy chế độ thông báo hiện tại
+export const getNotificationMode = () => {
+  try {
+    const mode = localStorage.getItem(NOTIFICATION_MODE_KEY);
+    return mode || NOTIFICATION_MODES.SINGLE_LATEST; // Mặc định: chỉ hiển thị 1
+  } catch (e) {
+    return NOTIFICATION_MODES.SINGLE_LATEST;
+  }
+};
+
+// Đặt chế độ thông báo
+export const setNotificationMode = (mode) => {
+  try {
+    if (Object.values(NOTIFICATION_MODES).includes(mode)) {
+      localStorage.setItem(NOTIFICATION_MODE_KEY, mode);
+      // Trigger event để ToastContainer cập nhật
+      window.dispatchEvent(new CustomEvent('notificationModeChanged', { detail: { mode } }));
+    }
+  } catch (e) {
+    console.error('Cannot set notification mode:', e);
+  }
+};
+
+// Kiểm tra có nhóm thông báo theo người gửi không
+export const isGroupingEnabled = () => {
+  try {
+    const v = localStorage.getItem(NOTIFICATION_GROUP_KEY);
+    if (v === null) return true; // Mặc định: có nhóm
+    return v === '1';
+  } catch (e) {
+    return true;
+  }
+};
+
+// Bật/tắt nhóm thông báo
+export const setGroupingEnabled = (enabled) => {
+  try {
+    localStorage.setItem(NOTIFICATION_GROUP_KEY, enabled ? '1' : '0');
+  } catch (e) {}
+};
+
 export const subscribeNotifications = (cb) => {
   listeners.push(cb);
   return () => {
@@ -9,7 +61,27 @@ export const subscribeNotifications = (cb) => {
 
 export const showToast = (title, message, opts = {}) => {
   const id = `toast_${Date.now()}_${Math.random().toString(36).substr(2,6)}`;
-  const toast = { id, title, message, ...opts };
+  
+  // Tạo groupKey để nhóm thông báo từ cùng người gửi
+  const groupKey = opts.senderId 
+    ? `sender_${opts.senderId}` 
+    : (opts.groupKey || `generic_${opts.category || 'message'}`);
+  
+  const toast = { 
+    id, 
+    title, 
+    message, 
+    variant: opts.variant || 'message',
+    category: opts.category || 'message',
+    senderName: opts.senderName,
+    senderAvatar: opts.senderAvatar,
+    senderId: opts.senderId, // ID người gửi để nhóm
+    groupKey,                 // Key để nhóm các thông báo
+    timestamp: opts.timestamp || new Date(),
+    onClick: opts.onClick,
+    ...opts 
+  };
+  
   listeners.forEach((cb) => {
     try { cb({ type: 'add', toast }); } catch (e) { console.error(e); }
   });
@@ -170,4 +242,42 @@ export default {
   setSoundEnabled,
   getSoundVolume,
   setSoundVolume,
+  getNotificationMode,
+  setNotificationMode,
+  isGroupingEnabled,
+  setGroupingEnabled,
+  NOTIFICATION_MODES,
+};
+
+// Helper function để hiển thị toast tin nhắn mới
+export const showMessageToast = ({ senderName, senderAvatar, senderId, message, onClick }) => {
+  // Kiểm tra settings trước khi hiển thị
+  try {
+    const settingsStr = localStorage.getItem('settings_notifications');
+    if (settingsStr) {
+      const settings = JSON.parse(settingsStr);
+      
+      // Kiểm tra messageNotifications và toastEnabled
+      if (settings.messageNotifications === false || settings.toastEnabled === false) {
+        console.log('[Toast] Notifications disabled in settings');
+        return null;
+      }
+    }
+  } catch (e) {
+    console.warn('[Toast] Could not check settings:', e);
+  }
+  
+  return showToast(
+    senderName,
+    message,
+    {
+      variant: 'message',
+      category: 'message',
+      senderName,
+      senderAvatar,
+      senderId,              // Thêm senderId để nhóm thông báo
+      timestamp: new Date(),
+      onClick
+    }
+  );
 };

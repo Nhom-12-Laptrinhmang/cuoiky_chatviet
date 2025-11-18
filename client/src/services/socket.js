@@ -240,12 +240,16 @@ export const onTyping = (callback) => {
 // Lắng nghe user offline
 export const onUserOffline = (callback) => {
   const sock = getSocket();
+  // Ensure we don't attach duplicate handlers
+  try { sock.off('user_offline'); } catch (e) {}
   sock.on('user_offline', callback);
 };
 
 // Lắng nghe user joined
 export const onUserJoined = (callback) => {
   const sock = getSocket();
+  // Ensure we don't attach duplicate handlers
+  try { sock.off('user_joined'); } catch (e) {}
   sock.on('user_joined', callback);
 };
 
@@ -328,5 +332,23 @@ export const onContactUpdated = (callback) => {
   sock.on('contact_updated', (data) => {
     if (isDev) console.debug('[CONTACT_UPDATED]', data);
     callback(data);
+  });
+};
+
+export const onGroupCreated = (callback) => {
+  const sock = getSocket();
+  sock.off('group_created');
+  sock.on('group_created', (data) => {
+    if (isDev) console.debug('[GROUP_CREATED via socket]', data);
+    if (callback) callback(data);
+  });
+};
+
+export const onGroupUpdated = (callback) => {
+  const sock = getSocket();
+  sock.off('group_updated');
+  sock.on('group_updated', (data) => {
+    if (isDev) console.debug('[GROUP_UPDATED via socket]', data);
+    if (callback) callback(data);
   });
 };

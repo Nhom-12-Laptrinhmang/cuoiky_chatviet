@@ -55,6 +55,8 @@ def get_messages():
             'id': m.id,
             'sender_id': m.sender_id,
             'receiver_id': m.receiver_id,
+            # include sender avatar so clients can render avatars next to messages
+            'sender_avatar_url': (lambda sid: ( (lambda u: u.avatar_url if u else None)(__import__('models.user_model', fromlist=['User']).User.query.get(sid)) ))(m.sender_id),
             'content': m.content,
             'file_url': m.file_url,
             'message_type': m.message_type,
@@ -125,6 +127,8 @@ def get_conversations():
             u = User.query.get(v['id'])
             v['display_name'] = (u.display_name or u.username) if u else None
             v['username'] = u.username if u else None
+            # expose avatar for conversation list
+            v['avatar_url'] = u.avatar_url if u else None
         else:
             g = Group.query.get(v['id'])
             v['group_name'] = g.name if g else f'Group {v["id"]}'

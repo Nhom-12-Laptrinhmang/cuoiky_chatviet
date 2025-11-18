@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { getPrivacySettings, updatePrivacySettings } from '../services/settingsService';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import SettingToggle from './common/SettingToggle';
 import SettingSelect from './common/SettingSelect';
 
 const PrivacySettings = () => {
+  const { t } = useLanguage();
   const [settings, setSettings] = useState({
     lastSeen: 'everyone',
     profilePhoto: 'everyone',
@@ -69,36 +71,39 @@ const PrivacySettings = () => {
   };
 
   if (loading) {
-    return <div className="settings-loading">Loading...</div>;
+    return <div className="settings-loading">{t('loading')}</div>;
   }
 
   const privacyOptions = [
-    { value: 'everyone', label: 'Everyone' },
-    { value: 'contacts', label: 'My Contacts' },
-    { value: 'nobody', label: 'Nobody' }
+    { value: 'everyone', label: t('everyone') },
+    { value: 'contacts', label: t('contacts') },
+    { value: 'nobody', label: t('nobody') }
   ];
 
   return (
     <div className="settings-section">
-      <h3>Privacy Settings</h3>
+      <h3>{t('privacySettings')}</h3>
       {error && <div className="settings-error">{error}</div>}
       
       <div className="settings-group">
-        <h4>Who can see my personal info</h4>
+        <h4>WHO CAN SEE MY PERSONAL INFO</h4>
         <SettingSelect
-          label="Last seen"
+          label={t('lastSeen')}
+          description={t('lastSeenDesc')}
           value={settings.lastSeen}
           options={privacyOptions}
           onChange={(value) => handleSelectChange('lastSeen', value)}
         />
         <SettingSelect
-          label="Profile photo"
+          label={t('profilePhoto')}
+          description={t('profilePhotoDesc')}
           value={settings.profilePhoto}
           options={privacyOptions}
           onChange={(value) => handleSelectChange('profilePhoto', value)}
         />
         <SettingSelect
-          label="About"
+          label={t('about')}
+          description={t('aboutDesc')}
           value={settings.about}
           options={privacyOptions}
           onChange={(value) => handleSelectChange('about', value)}
@@ -106,19 +111,19 @@ const PrivacySettings = () => {
       </div>
 
       <div className="settings-group">
-        <h4>Messaging</h4>
+        <h4>MESSAGING</h4>
         <SettingToggle
-          label="Read receipts"
-          description="If turned off, you won't send or receive read receipts"
+          label={t('readReceipts')}
+          description={t('readReceiptsDesc')}
           checked={settings.readReceipts}
           onChange={() => handleToggle('readReceipts')}
         />
       </div>
 
       <div className="settings-group">
-        <h4>Groups</h4>
+        <h4>{t('groups').toUpperCase()}</h4>
         <SettingSelect
-          label="Who can add me to groups"
+          label={t('groupsDesc')}
           value={settings.groupsAddMe}
           options={privacyOptions}
           onChange={(value) => handleSelectChange('groupsAddMe', value)}
@@ -126,10 +131,10 @@ const PrivacySettings = () => {
       </div>
 
       <div className="settings-group">
-        <h4>Blocked Contacts</h4>
+        <h4>{t('blockedContacts').toUpperCase()}</h4>
         <div className="blocked-list">
           {settings.blockedContacts.length === 0 ? (
-            <p className="empty-state">No blocked contacts</p>
+            <p className="empty-state">{t('none')}</p>
           ) : (
             settings.blockedContacts.map(contact => (
               <div key={contact.id} className="blocked-item">

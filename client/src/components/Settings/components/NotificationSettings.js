@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { getNotificationSettings, updateNotificationSettings } from '../services/settingsService';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import SettingToggle from './common/SettingToggle';
 import SettingSelect from './common/SettingSelect';
 
 const NotificationSettings = () => {
+  const { t } = useLanguage();
   const [settings, setSettings] = useState({
     messageNotifications: true,
     messageSound: true,
@@ -13,7 +15,13 @@ const NotificationSettings = () => {
     callNotifications: true,
     callRingtone: 'default',
     showPreview: true,
-    notificationLight: true
+    notificationLight: true,
+    // Toast notification settings
+    toastEnabled: true,
+    toastPosition: 'bottom-right',
+    toastDuration: 7000,
+    toastSound: true,
+    toastMaxCount: 5
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -46,6 +54,11 @@ const NotificationSettings = () => {
     try {
       await updateNotificationSettings({ [key]: newValue });
       setError(null);
+      
+      // Trigger custom event để notify components khác trong cùng tab
+      window.dispatchEvent(new CustomEvent('settingsChanged', { 
+        detail: { category: 'notifications', key, value: newValue } 
+      }));
     } catch (err) {
       // Rollback on error
       setSettings(prev => ({ ...prev, [key]: oldValue }));
@@ -63,6 +76,11 @@ const NotificationSettings = () => {
     try {
       await updateNotificationSettings({ [key]: value });
       setError(null);
+      
+      // Trigger custom event để notify components khác trong cùng tab
+      window.dispatchEvent(new CustomEvent('settingsChanged', { 
+        detail: { category: 'notifications', key, value } 
+      }));
     } catch (err) {
       // Rollback on error
       setSettings(prev => ({ ...prev, [key]: oldValue }));
@@ -72,39 +90,39 @@ const NotificationSettings = () => {
   };
 
   if (loading) {
-    return <div className="settings-loading">Loading...</div>;
+    return <div className="settings-loading">{t('loading')}</div>;
   }
 
   return (
     <div className="settings-section">
-      <h3>Notification Settings</h3>
+      <h3>{t('notificationSettings')}</h3>
       {error && <div className="settings-error">{error}</div>}
       
       <div className="settings-group">
-        <h4>Message Notifications</h4>
+        <h4>{t('messageNotifications').toUpperCase()}</h4>
         <SettingToggle
-          label="Show notifications"
-          description="Display notifications for new messages"
+          label={t('messageNotifications')}
+          description={t('messageNotificationsDesc')}
           checked={settings.messageNotifications}
           onChange={() => handleToggle('messageNotifications')}
         />
         {settings.messageNotifications && (
           <>
             <SettingToggle
-              label="Sound"
-              description="Play sound for new messages"
+              label={t('soundEnabled')}
+              description={t('soundEnabledDesc')}
               checked={settings.messageSound}
               onChange={() => handleToggle('messageSound')}
             />
             <SettingToggle
-              label="Vibrate"
-              description="Vibrate for new messages"
+              label={t('vibrationEnabled')}
+              description={t('vibrationEnabledDesc')}
               checked={settings.messageVibrate}
               onChange={() => handleToggle('messageVibrate')}
             />
             <SettingToggle
-              label="Show preview"
-              description="Display message content in notifications"
+              label={t('notificationPreview')}
+              description={t('notificationPreviewDesc')}
               checked={settings.showPreview}
               onChange={() => handleToggle('showPreview')}
             />
@@ -113,17 +131,17 @@ const NotificationSettings = () => {
       </div>
 
       <div className="settings-group">
-        <h4>Group Notifications</h4>
+        <h4>{t('groupNotifications').toUpperCase()}</h4>
         <SettingToggle
-          label="Show group notifications"
-          description="Display notifications for group messages"
+          label={t('groupNotifications')}
+          description={t('groupNotificationsDesc')}
           checked={settings.groupNotifications}
           onChange={() => handleToggle('groupNotifications')}
         />
         {settings.groupNotifications && (
           <SettingToggle
-            label="Sound"
-            description="Play sound for group messages"
+            label={t('soundEnabled')}
+            description={t('soundEnabledDesc')}
             checked={settings.groupSound}
             onChange={() => handleToggle('groupSound')}
           />
@@ -131,10 +149,75 @@ const NotificationSettings = () => {
       </div>
 
       <div className="settings-group">
-        <h4>Call Notifications</h4>
+        <h4>{t('toastNotifications') || 'THÔNG BÁO POPUP'}</h4>
+        <p className="settings-description">
+          {t('toastNotificationsDesc') || 'Thông báo tin nhắn mới xuất hiện dưới dạng popup ở góc màn hình'}
+        </p>
+        
         <SettingToggle
-          label="Show call notifications"
-          description="Display notifications for incoming calls"
+          label={t('enableToastNotifications') || 'Bật thông báo popup'}
+          description={t('enableToastNotificationsDesc') || 'Hiển thị thông báo tin nhắn dưới dạng popup'}
+          checked={settings.toastEnabled}
+          onChange={() => handleToggle('toastEnabled')}
+        />
+        
+        {settings.toastEnabled && (
+          <>
+            <SettingSelect
+              label={t('toastPosition') || 'Vị trí hiển thị'}
+              description={t('toastPositionDesc') || 'Chọn vị trí hiển thị popup thông báo'}
+              value={settings.toastPosition}
+              options={[
+                { value: 'bottom-right', label: t('bottomRight') || 'Góc dưới bên phải' },
+                { value: 'bottom-left', label: t('bottomLeft') || 'Góc dưới bên trái' },
+                { value: 'top-right', label: t('topRight') || 'Góc trên bên phải' },
+                { value: 'top-left', label: t('topLeft') || 'Góc trên bên trái' }
+              ]}
+              onChange={(value) => handleSelectChange('toastPosition', value)}
+            />
+            
+            <SettingSelect
+              label={t('toastDuration') || 'Thời gian hiển thị'}
+              description={t('toastDurationDesc') || 'Thời gian popup tự động biến mất'}
+              value={settings.toastDuration}
+              options={[
+                { value: 3000, label: '3 ' + (t('seconds') || 'giây') },
+                { value: 5000, label: '5 ' + (t('seconds') || 'giây') },
+                { value: 7000, label: '7 ' + (t('seconds') || 'giây') + ' (' + (t('default') || 'mặc định') + ')' },
+                { value: 10000, label: '10 ' + (t('seconds') || 'giây') },
+                { value: 0, label: t('manual') || 'Đóng thủ công' }
+              ]}
+              onChange={(value) => handleSelectChange('toastDuration', parseInt(value))}
+            />
+            
+            <SettingToggle
+              label={t('toastSound') || 'Âm thanh thông báo'}
+              description={t('toastSoundDesc') || 'Phát âm thanh khi có thông báo mới'}
+              checked={settings.toastSound}
+              onChange={() => handleToggle('toastSound')}
+            />
+            
+            <SettingSelect
+              label={t('maxToastCount') || 'Số lượng popup tối đa'}
+              description={t('maxToastCountDesc') || 'Giới hạn số popup hiển thị cùng lúc'}
+              value={settings.toastMaxCount}
+              options={[
+                { value: 3, label: '3 ' + (t('notifications') || 'thông báo') },
+                { value: 5, label: '5 ' + (t('notifications') || 'thông báo') + ' (' + (t('default') || 'mặc định') + ')' },
+                { value: 7, label: '7 ' + (t('notifications') || 'thông báo') },
+                { value: 10, label: '10 ' + (t('notifications') || 'thông báo') }
+              ]}
+              onChange={(value) => handleSelectChange('toastMaxCount', parseInt(value))}
+            />
+          </>
+        )}
+      </div>
+
+      <div className="settings-group">
+        <h4>{t('callNotifications').toUpperCase()}</h4>
+        <SettingToggle
+          label={t('callNotifications')}
+          description={t('callNotificationsDesc')}
           checked={settings.callNotifications}
           onChange={() => handleToggle('callNotifications')}
         />
@@ -143,7 +226,7 @@ const NotificationSettings = () => {
             label="Ringtone"
             value={settings.callRingtone}
             options={[
-              { value: 'default', label: 'Default' },
+              { value: 'default', label: t('default') },
               { value: 'classic', label: 'Classic' },
               { value: 'modern', label: 'Modern' },
               { value: 'silent', label: 'Silent' }
@@ -151,16 +234,6 @@ const NotificationSettings = () => {
             onChange={(value) => handleSelectChange('callRingtone', value)}
           />
         )}
-      </div>
-
-      <div className="settings-group">
-        <h4>Other</h4>
-        <SettingToggle
-          label="Notification light"
-          description="Use LED indicator for notifications"
-          checked={settings.notificationLight}
-          onChange={() => handleToggle('notificationLight')}
-        />
       </div>
     </div>
   );

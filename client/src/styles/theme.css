@@ -1,0 +1,558 @@
+/* ===== THEME SYSTEM ===== */
+/* Light Theme (Default) */
+:root,
+.light-theme {
+  /* Primary colors */
+  --primary-color: #2196f3;
+  --primary-hover: #1976d2;
+  --primary-light: #e3f2fd;
+  
+  /* Background colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #eeeeee;
+  --bg-hover: #f0f0f0;
+  --bg-chat: #f8f9fa;
+  
+  /* Text colors */
+  --text-primary: #212121;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --text-disabled: #cccccc;
+  --text-inverse: #ffffff;
+  
+  /* Border colors */
+  --border-color: #e0e0e0;
+  --border-light: #f0f0f0;
+  --border-dark: #cccccc;
+  
+  /* Message bubble colors */
+  --bubble-sent: #dcf8c6;
+  --bubble-sent-text: #000000;
+  --bubble-received: #ffffff;
+  --bubble-received-text: #000000;
+  
+  /* Status colors */
+  --success-color: #4caf50;
+  --error-color: #f44336;
+  --warning-color: #ff9800;
+  --info-color: #2196f3;
+  
+  /* Shadow */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+  
+  /* Overlay */
+  --overlay: rgba(0, 0, 0, 0.3);
+  --overlay-light: rgba(0, 0, 0, 0.1);
+  
+  /* Font Sizes - Mặc định (Medium) */
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 24px;
+  --font-size-h1: 28px;
+  --font-size-h2: 22px;
+  --font-size-h3: 18px;
+  --font-size-h4: 16px;
+}
+
+/* Dark Theme */
+.dark-theme {
+  /* Primary colors */
+  --primary-color: #64b5f6;
+  --primary-hover: #42a5f5;
+  --primary-light: #1e3a5f;
+  
+  /* Background colors */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --bg-tertiary: #383838;
+  --bg-hover: #404040;
+  --bg-chat: #1e1e1e;
+  
+  /* Text colors */
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --text-tertiary: #808080;
+  --text-disabled: #606060;
+  --text-inverse: #1a1a1a;
+  
+  /* Border colors */
+  --border-color: #404040;
+  --border-light: #383838;
+  --border-dark: #505050;
+  
+  /* Message bubble colors */
+  --bubble-sent: #005c4b;
+  --bubble-sent-text: #e0e0e0;
+  --bubble-received: #2d2d2d;
+  --bubble-received-text: #e0e0e0;
+  
+  /* Status colors */
+  --success-color: #66bb6a;
+  --error-color: #ef5350;
+  --warning-color: #ffa726;
+  --info-color: #42a5f5;
+  
+  /* Shadow */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.4);
+  
+  /* Overlay */
+  --overlay: rgba(0, 0, 0, 0.6);
+  --overlay-light: rgba(0, 0, 0, 0.3);
+}
+
+/* ===== SMOOTH TRANSITIONS ===== */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Disable transitions during theme initialization */
+.no-transition * {
+  transition: none !important;
+}
+
+/* ===== APPLY THEME TO MAIN ELEMENTS ===== */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* App container */
+#root {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Chat containers */
+.chat-container,
+.chat-sidebar,
+.chat-list {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+.chat-main,
+.chat-messages {
+  background-color: var(--bg-chat);
+}
+
+/* Chat items */
+.chat-item {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+.chat-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.chat-item.active {
+  background-color: var(--primary-light);
+}
+
+/* Message bubbles */
+.message-sent .message-bubble {
+  background-color: var(--bubble-sent);
+  color: var(--bubble-sent-text);
+}
+
+.message-received .message-bubble {
+  background-color: var(--bubble-received);
+  color: var(--bubble-received-text);
+  border: 1px solid var(--border-color);
+}
+
+/* Input areas */
+.chat-input,
+.message-input,
+input,
+textarea,
+select {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.chat-input:focus,
+.message-input:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--primary-color);
+  background-color: var(--bg-primary);
+}
+
+/* Buttons */
+.btn-primary,
+.send-button {
+  background-color: var(--primary-color);
+  color: var(--text-inverse);
+}
+
+.btn-primary:hover,
+.send-button:hover {
+  background-color: var(--primary-hover);
+}
+
+/* Cards and panels */
+.card,
+.panel,
+.modal-content,
+.settings-modal {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Headers */
+.chat-header,
+.settings-header {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-dark);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* Links */
+a {
+  color: var(--primary-color);
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+/* Dividers */
+hr,
+.divider {
+  border-color: var(--border-color);
+}
+
+/* Tooltips */
+.tooltip {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+/* Dropdown menus */
+.dropdown-menu,
+.context-menu {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-md);
+}
+
+.dropdown-item:hover,
+.menu-item:hover {
+  background-color: var(--bg-hover);
+}
+
+/* Status indicators */
+.online-indicator {
+  background-color: var(--success-color);
+}
+
+.offline-indicator {
+  background-color: var(--text-tertiary);
+}
+
+/* Badges */
+.badge {
+  background-color: var(--primary-color);
+  color: var(--text-inverse);
+}
+
+.badge-error {
+  background-color: var(--error-color);
+}
+
+.badge-success {
+  background-color: var(--success-color);
+}
+
+/* Loading spinner */
+.spinner,
+.loading {
+  border-color: var(--border-color);
+  border-top-color: var(--primary-color);
+}
+
+/* Modal/backdrop utilities: make modals overlay the UI instead of pushing layout */
+.modal-backdrop,
+.avatar-modal-backdrop,
+.profile-modal-backdrop {
+  position: fixed;
+  inset: 0; /* top:0; right:0; bottom:0; left:0 */
+  display: flex;
+  z-index: 9999;
+  /* light transparent background so underlying UI is still visible */
+  background: rgba(0,0,0,0.02);
+}
+
+/* Avatar modal: small floating menu anchored near top-left by default */
+.avatar-modal-backdrop {
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 12px; /* allow some gap from edges */
+}
+
+/* Profile/modal dialogs: center on screen */
+.profile-modal-backdrop,
+.modal-backdrop {
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-modal,
+.profile-modal,
+.modal-content {
+  position: relative; /* keep inner layout stable */
+}
+
+/* Left navigation (vertical bar) */
+.left-nav {
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  box-sizing: border-box;
+  height: 100vh; /* span full height so we can align icons */
+  background: linear-gradient(180deg, #6b46c1 0%, #4c1d95 100%);
+  color: var(--text-inverse);
+  position: relative; /* allow pseudo-box positioning */
+}
+
+.left-nav .profile {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+}
+
+.left-nav .nav-icons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  /* occupy remaining height so we can push some icons to bottom */
+  height: calc(100% - 72px);
+  position: relative; /* allow absolute-positioning of bottom icons */
+}
+
+.left-nav .nav-icons .nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-inverse);
+  font-size: 20px;
+  padding: 8px;
+  margin: 6px 0;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Push the 3rd button and everything after it to the bottom area */
+.left-nav .nav-icons .nav-btn:nth-child(3) {
+  margin-top: auto;
+}
+
+/* Bottom wrapper for the two boxed icons */
+.left-nav-bottom {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: 3; /* above pseudo-box */
+}
+
+.left-nav-bottom .nav-btn {
+  width: auto;
+  padding: 6px;
+}
+
+.left-nav .nav-icons .nav-btn.active {
+  background: rgba(255,255,255,0.08);
+  border-radius: 10px;
+}
+
+/* Visual boxed area at bottom of left-nav (no JSX changes) */
+.left-nav::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 8px;
+  width: 56px; /* box width */
+  height: 120px; /* box height to contain both icons */
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ensure nav-icons area has higher stacking for non-absolute buttons */
+.left-nav .nav-icons { z-index: 1; }
+
+/* ===== FONT SIZE SCALES ===== */
+/* Small Font Size */
+body.font-size-small,
+body.font-size-small * {
+  --font-size-xs: 10px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 15px;
+  --font-size-xl: 16px;
+  --font-size-2xl: 18px;
+  --font-size-3xl: 20px;
+  --font-size-h1: 24px;
+  --font-size-h2: 20px;
+  --font-size-h3: 16px;
+  --font-size-h4: 14px;
+}
+
+/* Medium Font Size (Default) */
+body.font-size-medium,
+body.font-size-medium * {
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 24px;
+  --font-size-h1: 28px;
+  --font-size-h2: 22px;
+  --font-size-h3: 18px;
+  --font-size-h4: 16px;
+}
+
+/* Large Font Size */
+body.font-size-large,
+body.font-size-large * {
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-md: 17px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 22px;
+  --font-size-3xl: 26px;
+  --font-size-h1: 32px;
+  --font-size-h2: 26px;
+  --font-size-h3: 20px;
+  --font-size-h4: 18px;
+}
+
+/* Apply font sizes to common elements */
+body {
+  font-size: var(--font-size-base);
+}
+
+h1 { font-size: var(--font-size-h1); }
+h2 { font-size: var(--font-size-h2); }
+h3 { font-size: var(--font-size-h3); }
+h4 { font-size: var(--font-size-h4); }
+
+p, span, div {
+  font-size: var(--font-size-base);
+}
+
+.text-xs { font-size: var(--font-size-xs); }
+.text-sm { font-size: var(--font-size-sm); }
+.text-base { font-size: var(--font-size-base); }
+.text-md { font-size: var(--font-size-md); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+.text-2xl { font-size: var(--font-size-2xl); }
+.text-3xl { font-size: var(--font-size-3xl); }
+
+/* Apply to common UI elements */
+.settings-section,
+.settings-group,
+.chat-container,
+.message-bubble,
+.chat-item {
+  font-size: var(--font-size-base);
+}
+
+.settings-section h3 {
+  font-size: var(--font-size-h3);
+}
+
+.settings-section h4 {
+  font-size: var(--font-size-h4);
+}
+
+.setting-label {
+  font-size: var(--font-size-md);
+}
+
+.setting-description {
+  font-size: var(--font-size-sm);
+}
+
+input, textarea, select, button {
+  font-size: var(--font-size-base);
+}
+
+.btn {
+  font-size: var(--font-size-md);
+}
+
+/* Chat specific */
+.chat-item-name {
+  font-size: var(--font-size-md);
+}
+
+.chat-item-preview {
+  font-size: var(--font-size-sm);
+}
+
+.message-text {
+  font-size: var(--font-size-base);
+}
+
+.message-time {
+  font-size: var(--font-size-xs);
+}
+
+.chat-header-name {
+  font-size: var(--font-size-lg);
+}
+

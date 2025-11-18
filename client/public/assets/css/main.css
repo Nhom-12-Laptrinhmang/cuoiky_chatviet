@@ -30,8 +30,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--gray-light);
-  color: var(--text-dark);
+  background: var(--bg-primary, var(--gray-light));
+  color: var(--text-primary, var(--text-dark));
   line-height: 1.6;
 }
 

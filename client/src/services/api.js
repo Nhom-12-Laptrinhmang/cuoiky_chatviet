@@ -253,10 +253,13 @@ export const messageAPI = {
 
 // Group APIs
 export const groupAPI = {
-  createGroup: (name) => api.post('/groups', { name }),
+  createGroup: (name, memberIds = []) => api.post('/groups', { name, member_ids: memberIds }),
   joinGroup: (groupId) => api.post(`/groups/${groupId}/join`),
   getMyGroups: () => api.get('/groups'),
   getGroupMembers: (groupId) => api.get(`/groups/${groupId}/members`),
+  addMembersToGroup: (groupId, memberIds) => api.post(`/groups/${groupId}/members`, { member_ids: memberIds }),
+  removeMemberFromGroup: (groupId, userId) => api.delete(`/groups/${groupId}/members/${userId}`),
+  getGroupMessages: (groupId) => api.get(`/groups/${groupId}/messages`),
 };
 
 export default api;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { userAPI } from '../../services/api';
 import api, { apiDirect } from '../../services/api';
-import { sendFriendRequest } from '../../services/socket';
+import { sendFriendRequest, getSocket } from '../../services/socket';
 import { showToast, showSystemNotification } from '../../services/notifications';
 import profileSync from '../../services/profileSync';
 
@@ -56,6 +56,55 @@ const ProfileModal = ({ isOpen, onClose, user, onUpdated, onOpenEdit, isOwner = 
     setPhoneNumber(user?.phone_number || '');
     // no-op: keep local component state in sync with provided `user`
   }, [user, isOpen]);
+
+  // Listen for realtime contact/profile updates specifically for this user
+  useEffect(() => {
+    try {
+      const sock = getSocket();
+      if (!sock) return;
+      const handler = (payload) => {
+        try {
+          if (!payload) return;
+          const ev = payload.event || (payload?.action || '').toString();
+          const data = payload.data || payload;
+          if ((ev === 'PROFILE_UPDATED' || ev === 'CONTACT_UPDATED') && data && String(data.id) === String(user?.id)) {
+            if (data.avatar_url) setAvatarPreview(data.avatar_url);
+            if (data.display_name) setDisplayName(data.display_name);
+            if (data.gender) setGender(data.gender);
+            if (data.birthdate) setBirthdate(data.birthdate);
+            if (data.phone_number) setPhoneNumber(data.phone_number);
+          }
+        } catch (e) {
+          // ignore
+        }
+      };
+      sock.on('contact_updated', handler);
+      return () => {
+        try { sock.off('contact_updated', handler); } catch (e) {}
+      };
+    } catch (e) {
+      // ignore
+    }
+  }, [user?.id]);
+
+  // Build absolute avatar URL (fallback to axios baseURL or window.location.origin)
+  const buildAvatarSrc = (avatar_url) => {
+    try {
+      if (!avatar_url) return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName||user?.username||'U')}&background=ffffff&color=0b5ed7`;
+      if (typeof avatar_url === 'string') {
+        if (avatar_url.startsWith('data:')) return avatar_url;
+        if (avatar_url.startsWith('http://') || avatar_url.startsWith('https://')) return avatar_url;
+        if (avatar_url.startsWith('//')) return `${window.location.protocol}${avatar_url}`;
+        const base = (api && api.defaults && api.defaults.baseURL) ? String(api.defaults.baseURL).replace(/\/$/, '') : (typeof window !== 'undefined' && window.location ? window.location.origin : '');
+        if (String(avatar_url).startsWith('/')) {
+          return base ? `${base}${avatar_url}` : avatar_url;
+        }
+        return base ? `${base}/${avatar_url}` : `/${avatar_url}`;
+      }
+    } catch (e) {
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName||user?.username||'U')}&background=ffffff&color=0b5ed7`;
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -250,12 +299,10 @@ const ProfileModal = ({ isOpen, onClose, user, onUpdated, onOpenEdit, isOwner = 
           <button onClick={onClose} style={{border:'none',background:'#f3f4f6',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:6,cursor:'pointer'}}>✕</button>
         </div>
 
-        <div style={{height:64, background:'#e8f0ea', flexShrink:0}} />
-
-        <div className="profile-main" style={{overflowY:'auto', padding:16, display:'flex', gap:20}}>
+  <div className="profile-main" style={{overflowY:'auto', padding:16, display:'flex', gap:20}}>
           <div className="profile-left" style={{width:220, display:'flex', flexDirection:'column', alignItems:'center'}}>
             <div className="avatar-wrapper" style={{width:120,height:120,borderRadius:60,overflow:'hidden',background:'#f0f0f0',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              <img className="profile-avatar" alt="avatar" src={avatarPreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName||user?.username||'U')}&background=ffffff&color=0b5ed7`} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+              <img data-user-id={user?.id} className="profile-avatar" alt="avatar" src={buildAvatarSrc(avatarPreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName||user?.username||'U')}&background=ffffff&color=0b5ed7`)} style={{width:'100%',height:'100%',objectFit:'cover'}} />
             </div>
             <label style={{marginTop:8,cursor:'pointer'}} className="avatar-upload">
               <input type="file" accept="image/*" onChange={onFileChange} style={{display:'none'}} />

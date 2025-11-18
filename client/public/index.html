@@ -4,24 +4,184 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title> Chat Viet </title>
+  <!-- Inline SVG favicon to avoid /favicon.ico 500/404 in dev -->
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23667eea'/><text x='16' y='21' font-size='16' text-anchor='middle' fill='white' font-family='Arial'>V</text></svg>">
   <link rel="stylesheet" href="./assets/css/main.css">
   <link rel="stylesheet" href="./assets/css/auth.css">
   <link rel="stylesheet" href="./assets/css/chat.css">
   <link rel="stylesheet" href="./assets/css/animations.css">
   <style>
+    /* Theme system - inline for immediate application */
+    :root,
+    .light-theme {
+      --primary-color: #2196f3;
+      --primary-hover: #1976d2;
+      --primary-light: #e3f2fd;
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f5;
+      --bg-tertiary: #eeeeee;
+      --bg-hover: #f0f0f0;
+      --bg-chat: #f8f9fa;
+      --text-primary: #212121;
+      --text-secondary: #666666;
+      --text-tertiary: #999999;
+      --text-disabled: #cccccc;
+      --text-inverse: #ffffff;
+      --border-color: #e0e0e0;
+      --border-light: #f0f0f0;
+      --border-dark: #cccccc;
+      --bubble-sent: #dcf8c6;
+      --bubble-sent-text: #000000;
+      --bubble-received: #ffffff;
+      --bubble-received-text: #000000;
+      --success-color: #4caf50;
+      --error-color: #f44336;
+      --warning-color: #ff9800;
+      --info-color: #2196f3;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+      --overlay: rgba(0, 0, 0, 0.3);
+      --overlay-light: rgba(0, 0, 0, 0.1);
+    }
+
+    .dark-theme {
+      --primary-color: #64b5f6;
+      --primary-hover: #42a5f5;
+      --primary-light: #1e3a5f;
+      --bg-primary: #1a1a1a;
+      --bg-secondary: #2d2d2d;
+      --bg-tertiary: #383838;
+      --bg-hover: #404040;
+      --bg-chat: #1e1e1e;
+      --text-primary: #e0e0e0;
+      --text-secondary: #b0b0b0;
+      --text-tertiary: #808080;
+      --text-disabled: #606060;
+      --text-inverse: #1a1a1a;
+      --border-color: #404040;
+      --border-light: #383838;
+      --border-dark: #505050;
+      --bubble-sent: #005c4b;
+      --bubble-sent-text: #e0e0e0;
+      --bubble-received: #2d2d2d;
+      --bubble-received-text: #e0e0e0;
+      --success-color: #66bb6a;
+      --error-color: #ef5350;
+      --warning-color: #ffa726;
+      --info-color: #42a5f5;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+      --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.4);
+      --overlay: rgba(0, 0, 0, 0.6);
+      --overlay-light: rgba(0, 0, 0, 0.3);
+    }
+
+    .no-transition * {
+      transition: none !important;
+    }
+    
+    /* Force theme colors */
+    body,
+    #root {
+      background-color: var(--bg-primary) !important;
+      color: var(--text-primary) !important;
+    }
+    
+    .chat-container {
+      background-color: var(--bg-secondary) !important;
+    }
+    
+    .chat-sidebar,
+    .chat-main,
+    .settings-container {
+      background-color: var(--bg-primary) !important;
+      color: var(--text-primary) !important;
+    }
+
     /* minimal styles for profile modal */
     .profile-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.3);display:flex;align-items:flex-start;justify-content:center;padding-top:40px;z-index:2000}
-    .profile-modal{width:720px;background:#fff;border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,0.12);overflow:hidden}
-    .profile-modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #eee}
+    .profile-modal{width:720px;background:var(--bg-primary, #fff);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,0.12);overflow:hidden}
+    .profile-modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border-color, #eee)}
     .profile-main{display:flex;gap:20px;padding:16px}
     .profile-left{width:220px;text-align:center}
     .profile-avatar{width:96px;height:96px;border-radius:50%}
     .avatar-upload{display:inline-block;margin-top:8px;cursor:pointer}
     .profile-right{flex:1}
-    .btn{padding:8px 12px;border-radius:6px;background:#f0f0f0;border:1px solid #ddd}
-    .btn-primary{background:#007bff;color:#fff;border-color:#007bff}
-    .btn-danger{background:#dc3545;color:#fff;border-color:#c82333}
+    .btn{padding:8px 12px;border-radius:6px;background:var(--bg-tertiary, #f0f0f0);border:1px solid var(--border-color, #ddd);color:var(--text-primary)}
+    .btn-primary{background:var(--primary-color, #007bff);color:var(--text-inverse, #fff);border-color:var(--primary-color, #007bff)}
+    .btn-danger{background:var(--error-color, #dc3545);color:var(--text-inverse, #fff);border-color:#c82333}
   </style>
+  
+  <script>
+    // Theme Manager - Inline for immediate execution
+    (function() {
+      function applyTheme(theme) {
+        const root = document.documentElement;
+        const body = document.body;
+        
+        // Remove existing theme classes
+        root.classList.remove('dark-theme', 'light-theme');
+        body.classList.remove('dark-theme', 'light-theme');
+        
+        if (theme === 'dark') {
+          root.classList.add('dark-theme');
+          body.classList.add('dark-theme');
+        } else if (theme === 'light') {
+          root.classList.add('light-theme');
+          body.classList.add('light-theme');
+        } else if (theme === 'auto') {
+          // Auto mode - follow system preference
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (prefersDark) {
+            root.classList.add('dark-theme');
+            body.classList.add('dark-theme');
+          } else {
+            root.classList.add('light-theme');
+            body.classList.add('light-theme');
+          }
+        }
+      }
+      
+      // Load theme from localStorage
+      try {
+        const savedSettings = localStorage.getItem('settings_appearance');
+        if (savedSettings) {
+          const settings = JSON.parse(savedSettings);
+          applyTheme(settings.theme || 'auto');
+        } else {
+          applyTheme('auto');
+        }
+      } catch (e) {
+        applyTheme('auto');
+      }
+      
+      // Listen for system theme changes
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      mediaQuery.addEventListener('change', function() {
+        try {
+          const savedSettings = localStorage.getItem('settings_appearance');
+          if (savedSettings) {
+            const settings = JSON.parse(savedSettings);
+            if (settings.theme === 'auto') {
+              applyTheme('auto');
+            }
+          }
+        } catch (e) {
+          // Ignore
+        }
+      });
+      
+      // Listen for theme changes from Settings component
+      window.addEventListener('themeChanged', function(e) {
+        if (e.detail && e.detail.theme) {
+          applyTheme(e.detail.theme);
+        }
+      });
+    })();
+  </script>
+  
+  <!-- devtools connector removed: using browser extension or standalone app without injecting script is safer -->
 </head>
 <body>
   <div id="root"></div>

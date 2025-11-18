@@ -1,91 +1,36 @@
-import React, { useState, useEffect } from 'react';import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import GeneralSettings from './components/GeneralSettings';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-export default Settings;};  );    </div>      </div>        {renderActiveSection()}      <div className="settings-content">      </div>        </nav>          ))}            </button>              <span className="nav-text">{section.name}</span>              <span className="nav-icon">{section.icon}</span>            >              onClick={() => setActiveSection(section.id)}              className={`settings-nav-item ${activeSection === section.id ? 'active' : ''}`}              key={section.id}            <button          {sections.map(section => (        <nav className="settings-nav">        </div>          <h2>Settings</h2>        <div className="settings-header">      <div className="settings-sidebar">    <div className="settings-container">  return (  };    }        return <GeneralSettings />;      default:        return <AppearanceSettings />;      case 'appearance':        return <CallSettings />;      case 'calls':        return <NotificationSettings />;      case 'notifications':        return <SecuritySettings />;      case 'security':        return <PrivacySettings />;      case 'privacy':        return <GeneralSettings />;      case 'general':    switch (activeSection) {  const renderActiveSection = () => {  ];    { id: 'appearance', name: 'Appearance', icon: '🎨' }    { id: 'calls', name: 'Calls', icon: '📞' },    { id: 'notifications', name: 'Notifications', icon: '🔔' },    { id: 'security', name: 'Security', icon: '🛡️' },    { id: 'privacy', name: 'Privacy', icon: '🔒' },    { id: 'general', name: 'General', icon: '⚙️' },  const sections = [  const [isLoading, setIsLoading] = useState(false);  const [activeSection, setActiveSection] = useState('general');const Settings = () => {import './styles/settings.css';import AppearanceSettings from './components/AppearanceSettings';import CallSettings from './components/CallSettings';import NotificationSettings from './components/NotificationSettings';import SecuritySettings from './components/SecuritySettings';import PrivacySettings from './components/PrivacySettings';import GeneralSettings from './panels/GeneralSettings';
-import PrivacySettings from './panels/PrivacySettings';
-import SecuritySettings from './panels/SecuritySettings';
-import NotificationsSettings from './panels/NotificationsSettings';
-import CallsSettings from './panels/CallsSettings';
-import AppearanceSettings from './panels/AppearanceSettings';
-import { settingsService } from '../../services/settingsService';
-import './styles/settings.css';
+import PrivacySettings from './components/PrivacySettings';
+import SecuritySettings from './components/SecuritySettings';
+import NotificationsSettings from './components/NotificationSettings';
+import CallsSettings from './components/CallSettings';
+import AppearanceSettings from './components/AppearanceSettings';
+import { 
+  getGeneralSettings, 
+  getPrivacySettings, 
+  getNotificationSettings, 
+  getCallSettings, 
+  getAppearanceSettings, 
+  updateGeneralSettings, 
+  updatePrivacySettings, 
+  updateNotificationSettings, 
+  updateCallSettings, 
+  updateAppearanceSettings 
+} from './services/settingsService';
+import { useLanguage } from '../../i18n/LanguageContext';
+import './styles/settings_new.css';
 
 const SETTINGS_TABS = [
-  { id: 'general', label: 'General', icon: '⚙️' },
-  { id: 'privacy', label: 'Privacy', icon: '🔒' },
-  { id: 'security', label: 'Security', icon: '🛡️' },
-  { id: 'notifications', label: 'Notifications', icon: '🔔' },
-  { id: 'calls', label: 'Calls', icon: '📞' },
-  { id: 'appearance', label: 'Appearance', icon: '🎨' }
+  { id: 'general', labelKey: 'general', icon: '⚙️' },
+  { id: 'privacy', labelKey: 'privacy', icon: '🔒' },
+  { id: 'security', labelKey: 'security', icon: '🛡️' },
+  { id: 'notifications', labelKey: 'notifications', icon: '🔔' },
+  { id: 'calls', labelKey: 'calls', icon: '📞' },
+  { id: 'appearance', labelKey: 'appearance', icon: '🎨' }
 ];
 
 const Settings = ({ onClose }) => {
+  const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState('general');
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -99,8 +44,22 @@ const Settings = ({ onClose }) => {
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const data = await settingsService.getSettings();
-      setSettings(data);
+      // Load all settings (security settings managed by SecuritySettings component)
+      const [general, privacy, notifications, calls, appearance] = await Promise.all([
+        getGeneralSettings(),
+        getPrivacySettings(),
+        getNotificationSettings(),
+        getCallSettings(),
+        getAppearanceSettings()
+      ]);
+      
+      setSettings({
+        general,
+        privacy,
+        notifications,
+        calls,
+        appearance
+      });
       setError(null);
     } catch (err) {
       setError('Failed to load settings');
@@ -127,7 +86,20 @@ const Settings = ({ onClose }) => {
 
     // Save to server
     try {
-      await settingsService.updateSetting(category, key, value);
+      // Call appropriate update function based on category
+      const updateFunctions = {
+        general: updateGeneralSettings,
+        privacy: updatePrivacySettings,
+        notifications: updateNotificationSettings,
+        calls: updateCallSettings,
+        appearance: updateAppearanceSettings
+      };
+      
+      const updateFn = updateFunctions[category];
+      if (updateFn) {
+        await updateFn({ [key]: value });
+      }
+      
       setSavingStates(prev => ({ ...prev, [settingKey]: 'saved' }));
       
       // Clear saved indicator after 2 seconds
@@ -164,8 +136,8 @@ const Settings = ({ onClose }) => {
     if (window.confirm('Bạn có chắc muốn đặt lại tất cả cài đặt về mặc định?')) {
       try {
         setLoading(true);
-        const defaultSettings = await settingsService.resetToDefaults();
-        setSettings(defaultSettings);
+        // Reload settings as reset
+        await loadSettings();
         if (window.showToast) {
           window.showToast('Thành công', 'Đã đặt lại cài đặt mặc định');
         }
@@ -194,14 +166,14 @@ const Settings = ({ onClose }) => {
 
   const renderActivePanel = () => {
     if (loading) {
-      return <div className="settings-loading">Đang tải cài đặt...</div>;
+      return <div className="settings-loading">{t('loading')}</div>;
     }
 
     if (error) {
       return (
         <div className="settings-error">
           <p>{error}</p>
-          <button onClick={loadSettings}>Thử lại</button>
+          <button onClick={loadSettings}>{t('reset')}</button>
         </div>
       );
     }
@@ -237,7 +209,7 @@ const Settings = ({ onClose }) => {
       <div className="settings-overlay" onClick={handleClose}></div>
       <div className="settings-container">
         <div className="settings-header">
-          <h2>Settings</h2>
+          <h2>{t('settings')}</h2>
           <button className="settings-close" onClick={handleClose}>✕</button>
         </div>
         
@@ -251,7 +223,7 @@ const Settings = ({ onClose }) => {
                   onClick={() => setActiveTab(tab.id)}
                 >
                   <span className="settings-nav-icon">{tab.icon}</span>
-                  <span className="settings-nav-label">{tab.label}</span>
+                  <span className="settings-nav-label">{t(tab.labelKey)}</span>
                 </button>
               ))}
             </nav>
@@ -268,9 +240,9 @@ const Settings = ({ onClose }) => {
               <div className="settings-status-indicators">
                 {Object.entries(savingStates).map(([key, state]) => (
                   <span key={key} className={`settings-status-badge status-${state}`}>
-                    {state === 'saving' && '⏳ Đang lưu...'}
-                    {state === 'saved' && '✓ Đã lưu'}
-                    {state === 'error' && '✗ Lỗi'}
+                    {state === 'saving' && `⏳ ${t('saving')}`}
+                    {state === 'saved' && `✓ ${t('saved')}`}
+                    {state === 'error' && `✗ ${t('error')}`}
                   </span>
                 ))}
               </div>
@@ -281,16 +253,16 @@ const Settings = ({ onClose }) => {
               className="settings-footer-btn btn-reset"
               onClick={handleReset}
               disabled={loading}
-              title="Đặt lại tất cả về mặc định"
+              title={t('reset')}
             >
-              Đặt lại mặc định
+              {t('reset')}
             </button>
             <button 
               className="settings-footer-btn btn-close"
               onClick={handleClose}
               disabled={loading}
             >
-              Đóng
+              {t('close')}
             </button>
           </div>
         </div>

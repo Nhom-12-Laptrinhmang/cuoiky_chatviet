@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { getCallSettings, updateCallSettings } from '../services/settingsService';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import SettingToggle from './common/SettingToggle';
 import SettingSelect from './common/SettingSelect';
 
 const CallSettings = () => {
+  const { t } = useLanguage();
   const [settings, setSettings] = useState({
     videoEnabled: true,
     audioEnabled: true,
@@ -101,19 +103,19 @@ const CallSettings = () => {
   };
 
   if (loading) {
-    return <div className="settings-loading">Loading...</div>;
+    return <div className="settings-loading">{t('loading')}</div>;
   }
 
   return (
     <div className="settings-section">
-      <h3>Call Settings</h3>
+      <h3>{t('callSettings')}</h3>
       {error && <div className="settings-error">{error}</div>}
       
       <div className="settings-group">
-        <h4>Call Preferences</h4>
+        <h4>CALL PREFERENCES</h4>
         <SettingToggle
-          label="Enable video calls"
-          description="Allow video calling functionality"
+          label={t('videoByDefault')}
+          description={t('videoByDefaultDesc')}
           checked={settings.videoEnabled}
           onChange={() => handleToggle('videoEnabled')}
         />
@@ -124,14 +126,14 @@ const CallSettings = () => {
           onChange={() => handleToggle('audioEnabled')}
         />
         <SettingToggle
-          label="Low data mode"
-          description="Use less data during calls (may reduce quality)"
+          label={t('dataSaving')}
+          description={t('dataSavingDesc')}
           checked={settings.lowDataMode}
           onChange={() => handleToggle('lowDataMode')}
         />
         <SettingToggle
-          label="Call waiting"
-          description="Get notified of incoming calls during active calls"
+          label={t('callWaiting')}
+          description={t('callWaitingDesc')}
           checked={settings.callWaiting}
           onChange={() => handleToggle('callWaiting')}
         />
@@ -139,24 +141,25 @@ const CallSettings = () => {
 
       {settings.videoEnabled && (
         <div className="settings-group">
-          <h4>Video Settings</h4>
+          <h4>VIDEO SETTINGS</h4>
           <SettingSelect
-            label="Video quality"
+            label={t('videoQuality')}
+            description={t('videoQualityDesc')}
             value={settings.videoQuality}
             options={[
-              { value: 'auto', label: 'Auto' },
+              { value: 'auto', label: t('auto') },
               { value: 'high', label: 'High (720p)' },
-              { value: 'medium', label: 'Medium (480p)' },
+              { value: 'medium', label: t('medium') + ' (480p)' },
               { value: 'low', label: 'Low (360p)' }
             ]}
             onChange={(value) => handleSelectChange('videoQuality', value)}
           />
           {devices.cameras.length > 0 && (
             <SettingSelect
-              label="Camera"
+              label={t('camera')}
               value={settings.cameraDevice}
               options={[
-                { value: 'default', label: 'Default Camera' },
+                { value: 'default', label: t('default') + ' Camera' },
                 ...devices.cameras
               ]}
               onChange={(value) => handleSelectChange('cameraDevice', value)}
@@ -166,13 +169,14 @@ const CallSettings = () => {
       )}
 
       <div className="settings-group">
-        <h4>Audio Settings</h4>
+        <h4>AUDIO SETTINGS</h4>
         {devices.microphones.length > 0 && (
           <SettingSelect
-            label="Microphone"
+            label={t('audioInput')}
+            description={t('audioInputDesc')}
             value={settings.microphoneDevice}
             options={[
-              { value: 'default', label: 'Default Microphone' },
+              { value: 'default', label: t('default') + ' Microphone' },
               ...devices.microphones
             ]}
             onChange={(value) => handleSelectChange('microphoneDevice', value)}
@@ -180,21 +184,16 @@ const CallSettings = () => {
         )}
         {devices.speakers.length > 0 && (
           <SettingSelect
-            label="Speaker"
+            label={t('audioOutput')}
+            description={t('audioOutputDesc')}
             value={settings.speakerDevice}
             options={[
-              { value: 'default', label: 'Default Speaker' },
+              { value: 'default', label: t('default') + ' Speaker' },
               ...devices.speakers
             ]}
             onChange={(value) => handleSelectChange('speakerDevice', value)}
           />
         )}
-        <SettingToggle
-          label="Speakerphone by default"
-          description="Automatically use speakerphone for calls"
-          checked={settings.speakerphone}
-          onChange={() => handleToggle('speakerphone')}
-        />
       </div>
     </div>
   );
