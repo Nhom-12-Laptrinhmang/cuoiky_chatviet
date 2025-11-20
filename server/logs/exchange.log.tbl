@@ -1,0 +1,5 @@
+This file is no longer needed and will be deleted.
+   request_id    |    event_name    |    time_start    |     time_end     |   duration_ms    |      method      |       url        |     user_id      |        ip        |   body_summary   |      status      |      extra      
+9d79111d-3e7d-4949-b2f0-6bf8744dcb1f | HTTP POST /test-api | 2025-11-19T17:51:27.655017 | 2025-11-19T17:51:27.655182 |        0         |       POST       |    /test-api     |       8454       |       None       | {"display_name": "MsW6EA", "gender": "male", "password": "***", "phone": "***", "token": "***", "username": "AyuYYsGj"} |       200        | {"response_length": 201}
+86dda9b9-3b1c-4fd4-9fd1-f64d6d6791da |   chat_message   | 2025-11-19T17:51:27.655463 |       398        |       4638       |    room-Boff     | {"content": "P2el7QsTLNOOH4V1gAhg", "token": "***", "emoji": "😂"}
+6c8b70dc-7321-4c42-bff1-9152e323fcff |   upload_file    | 2025-11-19T17:51:27.655550 |       4756       |   5Y0hjr84.png   |      80518       |     success      |       560       

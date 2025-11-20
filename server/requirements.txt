@@ -1,5 +1,6 @@
 Flask
 Flask-SocketIO
+Flask-CORS
 Flask-Migrate
 Flask-SQLAlchemy
 pyngrok

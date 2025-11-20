@@ -3,7 +3,7 @@ from services.auth_service import decode_token
 from config.database import db
 from models.group_model import Group, GroupMember
 from models.user_model import User
-from server.app import socketio
+socketio = None  # sẽ được import ở cuối file để tránh vòng lặp
 
 groups_bp = Blueprint('groups', __name__, url_prefix='/groups')
 
@@ -175,68 +175,90 @@ def add_members_to_group(group_id):
     """Add members to a group. Requires authorization. Only group owner can add members.
     Body: { "member_ids": [user_id1, user_id2, ...] } or { "user_id": user_id }
     """
-    uid = current_user_from_request(request)
-    if not uid:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    group = Group.query.get(group_id)
-    if not group:
-        return jsonify({'error': 'Group not found'}), 404
-    
-    # Check if current user is owner or admin
-    member_info = GroupMember.query.filter_by(group_id=group_id, user_id=uid).first()
-    if not member_info or member_info.role not in ('owner', 'admin'):
-        return jsonify({'error': 'Only group owner/admin can add members'}), 403
-    
-    data = request.get_json() or {}
-    member_ids = data.get('member_ids') or []
-    
-    # Also support single user_id
-    if 'user_id' in data and data['user_id']:
-        member_ids = [data['user_id']]
-    
-    if not member_ids:
-        return jsonify({'error': 'No members to add'}), 400
-    
-    # Normalize and validate
-    added_count = 0
-    added_ids = []
-    for mid in member_ids:
-        try:
-            mid = int(mid)
-        except (ValueError, TypeError):
-            continue
-        
-        # Check if user exists
-        user = User.query.get(mid)
-        if not user:
-            continue
-        
-        # Check if already a member
-        exists = GroupMember.query.filter_by(group_id=group_id, user_id=mid).first()
-        if exists:
-            continue
-        
-        # Add member
-        gm = GroupMember(group_id=group_id, user_id=mid, role='member')
-        db.session.add(gm)
-        added_count += 1
-        added_ids.append(mid)
-    
-    db.session.commit()
-    # Notify newly added users (if any) so their clients can refresh group lists
     try:
-        group_info = {'group_id': group.id, 'group_name': group.name}
-        for mid in added_ids:
-            try:
-                socketio.emit('group_created_notify', {**group_info, 'members': [mid]}, room=f'user-{mid}')
-            except Exception:
-                # ignore emit errors but keep processing
-                pass
-    except Exception:
-        pass
+        # Debug: log incoming payload and requester
+        try:
+            print(f"[ADD_MEMBERS] request.json={request.get_json()}")
+        except Exception:
+            print("[ADD_MEMBERS] could not read request JSON")
+        uid = current_user_from_request(request)
+        print(f"[ADD_MEMBERS] requester uid={uid} group_id={group_id}")
+        if not uid:
+            return jsonify({'error': 'Unauthorized'}), 401
 
-    return jsonify({'success': True, 'added': added_count})
+        group = Group.query.get(group_id)
+        if not group:
+            return jsonify({'error': 'Group not found'}), 404
+
+        # Check if current user is owner or admin
+        member_info = GroupMember.query.filter_by(group_id=group_id, user_id=uid).first()
+        if not member_info or member_info.role not in ('owner', 'admin'):
+            return jsonify({'error': 'Only group owner/admin can add members'}), 403
+
+        data = request.get_json() or {}
+        member_ids = data.get('member_ids') or []
+
+        # Also support single user_id
+        if 'user_id' in data and data['user_id']:
+            member_ids = [data['user_id']]
+
+        if not member_ids:
+            return jsonify({'error': 'No members to add'}), 400
+
+        # Normalize and validate -> add members one-by-one so a bad row won't fail entire batch
+        added_count = 0
+        added_ids = []
+        for mid in member_ids:
+            try:
+                mid = int(mid)
+            except (ValueError, TypeError):
+                # skip invalid ids
+                continue
+
+            # Check if user exists
+            user = User.query.get(mid)
+            if not user:
+                continue
+
+            # Check if already a member
+            exists = GroupMember.query.filter_by(group_id=group_id, user_id=mid).first()
+            if exists:
+                continue
+
+            # Add member with per-row commit to isolate failures
+            try:
+                gm = GroupMember(group_id=group_id, user_id=mid, role='member')
+                db.session.add(gm)
+                db.session.commit()
+                added_count += 1
+                added_ids.append(mid)
+            except Exception as ex:
+                # rollback this failed insert and continue with others; log exception for debugging
+                import traceback
+                print(f"[ADD_MEMBERS] failed to add mid={mid} to group={group_id}: {ex}")
+                traceback.print_exc()
+                db.session.rollback()
+                continue
+
+        # Notify newly added users (if any) so their clients can refresh group lists
+        try:
+            group_info = {'group_id': group.id, 'group_name': group.name}
+            from server.app import socketio
+            for mid in added_ids:
+                try:
+                    socketio.emit('group_created_notify', {**group_info, 'members': [mid]}, room=f'user-{mid}')
+                except Exception:
+                    # ignore emit errors but keep processing
+                    pass
+        except Exception:
+            pass
+
+        return jsonify({'success': True, 'added': added_ids, 'added_count': added_count}), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({'error': 'Failed to add members', 'detail': str(e)}), 500
 
 
 @groups_bp.route('/<int:group_id>/members/<int:user_id>', methods=['DELETE'])

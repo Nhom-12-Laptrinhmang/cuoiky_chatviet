@@ -62,7 +62,7 @@ const formatMessageTime = (ts) => {
   }
 };
 
-const MessageBubbleFixed = ({ message = {}, isSent = false, onReply, onReaction, onEmojiHover, onRetry }) => {
+const MessageBubbleFixed = ({ message = {}, isSent = false, isGroup = false, onReply, onReaction, onEmojiHover, onRetry }) => {
   const [showActions, setShowActions] = useState(false);
   const emoticons = ['❤️', '😂', '😮', '😢', '🔥', '👍'];
 
@@ -99,6 +99,13 @@ const MessageBubbleFixed = ({ message = {}, isSent = false, onReply, onReaction,
         {message.reply_to_id && (
           <div style={{ background: '#f0f0f0', padding: '6px 8px', borderLeft: '3px solid #0b5ed7', marginBottom: 6, fontSize: 12, color: '#666' }}>
             Trả lời tin nhắn
+          </div>
+        )}
+
+        {/* Show sender nickname in group chats for received messages */}
+        {isGroup && !isSent && (
+          <div style={{ fontSize: 12, color: '#444', marginBottom: 6, fontWeight: 600 }}>
+            {message.display_name || message.sender_name || message.sender_username || 'User'}
           </div>
         )}
 

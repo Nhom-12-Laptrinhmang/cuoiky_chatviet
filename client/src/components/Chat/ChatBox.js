@@ -13,6 +13,7 @@ import AvatarModal from './AvatarModal';
 import EditProfileModal from './EditProfileModal';
 import AddFriendModal from './AddFriendModal';
 import CreateGroupModal from './CreateGroupModal';
+import './chat-groups.css';
 import GroupManageModal from './GroupManageModal';
 import Settings from '../Settings/Settings';
 
@@ -40,6 +41,7 @@ const ChatBox = () => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [currentUserProfile, setCurrentUserProfile] = useState(null);
   const [groups, setGroups] = useState([]);
+  const [groupsCollapsed, setGroupsCollapsed] = useState(false);
   const [friendRequests, setFriendRequests] = useState([]);
   const [blockedTargets, setBlockedTargets] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -233,6 +235,16 @@ const ChatBox = () => {
   const [manageGroupData, setManageGroupData] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
 
+  // Normalize group objects returned by various endpoints so UI can rely on
+  // `group_name` and `display_name` consistently.
+  const normalizeGroup = (g) => {
+    if (!g) return g;
+    const idPart = g.id ? `Nhóm ${g.id}` : 'Nhóm';
+    const group_name = g.group_name || g.name || g.display_name || idPart;
+    const display_name = g.display_name || g.group_name || g.name || idPart;
+    return { ...g, group_name, display_name };
+  };
+
   const acceptFriendRequest = async (userId) => {
     try {
       await userAPI.acceptFriend(userId);
@@ -332,7 +344,7 @@ const ChatBox = () => {
       (async () => {
         try {
           const resp = await groupAPI.getMyGroups();
-          setGroups(resp.data || []);
+          setGroups((resp.data || []).map(normalizeGroup));
         } catch (e) {}
       })();
     } else {
@@ -426,7 +438,7 @@ const ChatBox = () => {
       (async () => {
         try {
           const resp = await groupAPI.getMyGroups();
-          setGroups(resp.data || []);
+          setGroups((resp.data || []).map(normalizeGroup));
         } catch (e) {}
       })();
     } else {
@@ -477,7 +489,7 @@ const ChatBox = () => {
 
   // Select a group for group chat
   const handleSelectGroup = (group) => {
-    setSelectedGroup(group);
+    setSelectedGroup(normalizeGroup(group));
     setSelectedUser(null);
     // clear any selected user persisted in localStorage
     localStorage.removeItem('selectedUser');
@@ -637,6 +649,7 @@ const ChatBox = () => {
     // Helper function để lấy tên người gửi từ nhiều nguồn
     const getSenderName = (data) => {
       // Ưu tiên: display_name > sender_name > username > sender_username > từ users list > fallback
+      if (data.display_name) return data.display_name;
       if (data.sender_name) return data.sender_name;
       if (data.sender_username) return data.sender_username;
       
@@ -1238,7 +1251,7 @@ const ChatBox = () => {
         (async () => {
           try {
             const resp = await groupAPI.getMyGroups();
-            setGroups(resp.data || []);
+            setGroups((resp.data || []).map(normalizeGroup));
           } catch (e) {
             if (isDev) console.debug('Error refreshing groups after creation', e);
           }
@@ -1252,7 +1265,7 @@ const ChatBox = () => {
         (async () => {
           try {
             const resp = await groupAPI.getMyGroups();
-            setGroups(resp.data || []);
+            setGroups((resp.data || []).map(normalizeGroup));
           } catch (e) {
             if (isDev) console.debug('Error refreshing groups on notification', e);
           }
@@ -1273,7 +1286,7 @@ const ChatBox = () => {
     const fetchGroups = async () => {
       try {
         const resp = await groupAPI.getMyGroups();
-        setGroups(resp.data || []);
+        setGroups((resp.data || []).map(normalizeGroup));
       } catch (err) {
         console.error('Lỗi tải nhóm:', err);
       }
@@ -1567,7 +1580,7 @@ const ChatBox = () => {
       (async () => {
         try {
           const resp = await groupAPI.getMyGroups();
-          setGroups(resp.data || []);
+          setGroups((resp.data || []).map(normalizeGroup));
         } catch (e) {}
       })();
     } else {
@@ -1769,7 +1782,7 @@ const ChatBox = () => {
       (async () => {
         try {
           const resp = await groupAPI.getMyGroups();
-          setGroups(resp.data || []);
+          setGroups((resp.data || []).map(normalizeGroup));
         } catch (e) {}
       })();
     } else {
@@ -2026,7 +2039,7 @@ const ChatBox = () => {
           const refreshGroups = async () => {
             try {
               const resp = await groupAPI.getMyGroups();
-              setGroups(resp.data || []);
+              setGroups((resp.data || []).map(normalizeGroup));
             } catch (err) {
               console.error('Error refreshing groups:', err);
             }
@@ -2404,28 +2417,44 @@ const ChatBox = () => {
             </div>
           )}
         </div>
-        <div className="groups-section">
+        <div className={`groups-section ${groupsCollapsed ? 'collapsed' : ''}`}>
           <div className="groups-header">
-            <h3>Nhóm</h3>
-            <button
-              className="btn-create-group"
-              onClick={async () => {
-                const name = window.prompt('Tên nhóm mới:');
-                if (!name) return;
-                try {
-                  await groupAPI.createGroup(name);
-                  const resp = await groupAPI.getMyGroups();
-                  setGroups(resp.data || []);
-                  showToast('Nhóm', 'Đã tạo nhóm');
-                  showSystemNotification('Nhóm', 'Đã tạo nhóm');
-                } catch (err) {
-                  showToast('Nhóm', 'Lỗi tạo nhóm');
-                  showSystemNotification('Nhóm', 'Lỗi tạo nhóm');
-                }
-              }}
-            >
-              Tạo
-            </button>
+            <div className="groups-header-left">
+              <h3>Nhóm</h3>
+            </div>
+            <div className="groups-header-center">
+              <button
+                className={`btn-collapse ${groupsCollapsed ? 'collapsed' : ''}`}
+                onClick={() => setGroupsCollapsed(v => !v)}
+                title={groupsCollapsed ? 'Mở rộng' : 'Thu gọn'}
+                aria-pressed={groupsCollapsed}
+              >
+                <svg className="arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="34" height="34">
+                  <path d="M7 10l5 5 5-5" fill="none" />
+                </svg>
+              </button>
+            </div>
+            <div className="groups-header-actions">
+              <button
+                className="btn-create-group"
+                onClick={async () => {
+                  const name = window.prompt('Tên nhóm mới:');
+                  if (!name) return;
+                  try {
+                    await groupAPI.createGroup(name);
+                    const resp = await groupAPI.getMyGroups();
+                    setGroups((resp.data || []).map(normalizeGroup));
+                    showToast('Nhóm', 'Đã tạo nhóm');
+                    showSystemNotification('Nhóm', 'Đã tạo nhóm');
+                  } catch (err) {
+                    showToast('Nhóm', 'Lỗi tạo nhóm');
+                    showSystemNotification('Nhóm', 'Lỗi tạo nhóm');
+                  }
+                }}
+              >
+                Tạo
+              </button>
+            </div>
           </div>
           <div className="groups-list">
             {groups.map((g) => (
@@ -2435,13 +2464,13 @@ const ChatBox = () => {
                 onClick={() => handleSelectGroup(g)}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
               >
-                <span style={{flex:1}}>{g.name}</span>
+                <span style={{flex:1}}>{g.group_name || g.display_name || g.name || `Nhóm ${g.id}`}</span>
                 <div style={{display:'flex', gap:8}}>
                   <button
                     className="btn-group-members"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setManageGroupData(g);
+                      setManageGroupData(normalizeGroup(g));
                       setManageGroupId(g.id);
                     }}
                   >
@@ -2476,7 +2505,7 @@ const ChatBox = () => {
                         e.stopPropagation();
                         try {
                           setManageGroupId(selectedGroup.id);
-                          setManageGroupData(selectedGroup);
+                          setManageGroupData(normalizeGroup(selectedGroup));
                         } catch (err) {}
                       }}
                       style={{marginLeft:8}}
@@ -2552,6 +2581,7 @@ const ChatBox = () => {
                         key={idx}
                         message={messageWithReactions}
                         isSent={msg.isSent}
+                        isGroup={!!selectedGroup}
                         onRetry={handleRetry}
                         onReply={(message) => {
                           setReplyTo(message);

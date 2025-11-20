@@ -1,0 +1,4 @@
+request_id,event_name,time_start,time_end,duration_ms,method,url,user_id,ip,body_summary,status,extra
+8ac1b6c6-5f94-4ddd-8110-ba473827035b,HTTP POST /test-api,2025-11-19T17:47:46.113742,2025-11-19T17:47:46.113894,0,POST,/test-api,7120,,"{""display_name"": ""j5m298"", ""gender"": ""female"", ""password"": ""***"", ""phone"": ""***"", ""token"": ""***"", ""username"": ""Du5kT2I4""}",200,"{""response_length"": 356}"
+6e7c61d2-4bf4-4845-bdab-d3cddc1ca109,chat_message,2025-11-19T17:47:46.114210,128,7985,room-dRTO,"{""content"": ""0xm1d4Zq7OcjK8nstzU9"", ""token"": ""***"", ""emoji"": ""❤️""}"
+f1dc4c88-5df7-4353-a802-f2fa0a1e39b2,upload_file,2025-11-19T17:47:46.114547,4400,lHinj9Ay.png,54933,success,103

@@ -1,0 +1,71 @@
+[
+  {
+    "request_id": "e1495404-fd0e-4198-bc9c-d22689448bd0",
+    "event_name": "HTTP POST /test-api",
+    "time_start": "2025-11-19T17:54:45.091783",
+    "time_end": "2025-11-19T17:54:45.091945",
+    "duration_ms": 0,
+    "method": "POST",
+    "url": "/test-api",
+    "user_id": 5752,
+    "ip": null,
+    "body_summary": "{\"display_name\": \"baHcmi\", \"gender\": \"other\", \"password\": \"***\", \"phone\": \"***\", \"token\": \"***\", \"username\": \"CDc0PgMm\"}",
+    "status": 200,
+    "extra": "{\"response_length\": 247}"
+  },
+  {
+    "request_id": "e4f8215f-ea52-44ba-85d1-bb74f124a76e",
+    "event_name": "chat_message",
+    "time": "2025-11-19T17:54:45.092315",
+    "from_user": 9046,
+    "to_user": 6019,
+    "to_room": "room-4jsu",
+    "payload_summary": "{\"content\": \"20jKml0GkMUivXyXm4qU\", \"token\": \"***\", \"emoji\": \"😂\"}"
+  },
+  {
+    "request_id": "e4eac51f-66d6-4a46-8eab-2cf97a77d07b",
+    "event_name": "upload_file",
+    "time": "2025-11-19T17:54:45.092519",
+    "user_id": 7673,
+    "filename": "XZcz33gq.png",
+    "file_size": 19364,
+    "status": "fail",
+    "duration_ms": 722
+  },
+  {
+    "request_id": "8a5f62c1-3c9a-405d-8434-ab6ca4191ba4",
+    "event_name": "HTTP POST /test-api",
+    "time_start": "2025-11-19T17:59:17.134573",
+    "time_end": "2025-11-19T17:59:17.136530",
+    "duration_ms": 0,
+    "method": "POST",
+    "url": "/test-api",
+    "user_id": 697,
+    "ip": null,
+    "body_summary": "{\"display_name\": \"imbknI\", \"gender\": \"female\", \"password\": \"***\", \"phone\": \"***\", \"token\": \"***\", \"username\": \"VQD4NPMu\"}",
+    "status": 200,
+    "extra": "{\"response_length\": 207}",
+    "source": "server"
+  },
+  {
+    "request_id": "e2912c73-1207-475f-ba50-21c0fa7972b3",
+    "event_name": "chat_message",
+    "time": "2025-11-19T17:59:17.140512",
+    "from_user": 2625,
+    "to_user": 289,
+    "to_room": "room-jick",
+    "payload_summary": "{\"content\": \"hfu92svZyZxdLXJycXQ9\", \"token\": \"***\", \"emoji\": \"👍\"}",
+    "source": "server"
+  },
+  {
+    "request_id": "b5cb6d7e-75d5-4477-a399-dddbb4abc363",
+    "event_name": "upload_file",
+    "time": "2025-11-19T17:59:17.141267",
+    "user_id": 8553,
+    "filename": "wRV1evxW.png",
+    "file_size": 41809,
+    "status": "success",
+    "duration_ms": 821,
+    "source": "server"
+  }
+]

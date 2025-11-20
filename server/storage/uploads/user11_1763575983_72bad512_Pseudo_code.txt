@@ -1,0 +1,190 @@
+# Pseudocode — Các quy trình mạng chính (tiếng Việt)
+
+Tập hợp pseudocode ngắn gọn cho các luồng chính: khởi động server, đăng nhập, kết nối socket/join, gửi tin nhắn, upload file (presigned và qua backend), presence, và ngrok.
+
+---
+
+## 1. Khởi động server
+
+// app.py
+START
+  load config từ `server/config/settings.py`
+  khởi tạo Flask app
+  khởi tạo Flask-SocketIO
+  khởi tạo DB (sqlalchemy) và migrate
+  đăng ký blueprints từ `server/routes/*`
+  đăng ký socket events từ `server/sockets/*`
+  if ENABLE_NGROK == true:
+    public_url = start_ngrok(app, port)
+    app.config["BASE_URL"] = public_url
+  socketio.run(app, host, port)
+END
+
+---
+
+## 2. Đăng nhập / Tạo và giải mã JWT
+
+// auth_service.py
+FUNCTION login_user(username, password):
+  user = find User by username
+  if not user or not check_password(password, user.password_hash):
+    return error
+  payload = { user_id: user.id, exp: now + 24h }
+  token = jwt.encode(payload, SECRET)
+  return token
+
+FUNCTION decode_token(token):
+  try:
+    payload = jwt.decode(token, SECRET)
+    if token in blacklist: return null
+    return payload
+  except:
+    return null
+
+---
+
+## 3. Socket.IO: kết nối và join room
+
+// socket.js (client) calls `join` with { user_id }
+// chat_events.py (server)
+ON socket connect:
+  emit to client: 'connected'
+
+ON socket 'join' with data:
+  user_id = data.user_id
+  if user_id provided:
+    user_sockets[user_id] = request.sid
+    room_name = 'user-' + user_id
+  else if data.room provided:
+    room_name = data.room
+  else:
+    return (invalid join)
+
+  join_room(room_name)
+  emit 'user_joined' to room room_name (notify own tabs)
+  for each friend_id of user_id:
+    emit 'user_joined' to room 'user-' + friend_id
+
+---
+
+## 4. Gửi tin nhắn realtime (1:1 hoặc group)
+
+// client emits 'send_message' with payload
+ON socket 'send_message' with data:
+  sender_id = data.sender_id
+  receiver_id = data.receiver_id
+  group_id = data.group_id
+  content = data.content
+  client_msg_id = data.client_message_id
+
+  if required fields missing or content empty:
+    return (ignore / warn)
+
+  if not group_id:
+    if blocked(sender_id, receiver_id) OR blocked(receiver_id, sender_id):
+      if client_msg_id: emit to sender 'message_sent_ack' {client_msg_id, status: 'blocked'}
+      return
+
+  try:
+    if group_id:
+      verify sender is member of group
+      msg = create Message(sender_id, receiver_id_placeholder, content, group_id)
+    else:
+      msg = create Message(sender_id, receiver_id, content)
+    save msg to DB
+  except Exception e:
+    rollback DB
+    if client_msg_id: emit to sender 'message_sent_ack' {client_msg_id, status: 'error', detail: e}
+    return
+
+  message_data = build response with msg.id, sender info, content, timestamp, group_id?
+
+  if group_id:
+    emit 'receive_message' to room 'group-' + group_id (or to each member)
+  else:
+    emit 'receive_message' to room 'user-' + receiver_id
+    if client_msg_id: emit 'message_sent_ack' to sender (request.sid) {client_msg_id, status: 'sent', server_id: msg.id}
+
+---
+
+## 5. Presence (online/offline)
+
+ON user join (see section 3):
+  add user_id -> sid mapping to user_sockets
+  for each friend of user_id:
+    emit 'user_joined' to 'user-' + friend
+
+ON socket disconnect:
+  find user_id whose sid == request.sid in user_sockets
+  remove mapping user_id
+  for each friend of user_id:
+    emit 'user_offline' to 'user-' + friend
+
+Note: hiện mapping ở server là in-memory, nên multi-instance cần Redis pub/sub.
+
+---
+
+## 6. Upload file — 2 luồng
+
+### 6A. Presigned URL (direct-to-S3) — backend trả presigned
+
+// client: gọi POST /uploads/presigned-url với JWT và { filename, content_type, file_size }
+// server: uploads.py
+ON POST /uploads/presigned-url with JSON:
+  token = Authorization header bearer
+  payload = decode_token(token)
+  if not payload: return 401
+  user_id = payload.user_id
+  if file_size > MAX: return 400
+  key = generate unique key using user_id + timestamp + uuid + secure_filename
+  s3_client = get_s3_client()
+  if not s3_client: return error
+  presigned_post = s3_client.generate_presigned_post(Bucket, Key=key, Fields=..., Conditions=...)
+  file_url = build s3 public URL from bucket/key
+  return { upload_url: presigned_post.url, fields: presigned_post.fields, file_url, key }
+
+// client sẽ POST form-data trực tiếp tới presigned_post.url
+
+### 6B. Upload qua backend (multipart)
+
+ON POST /uploads/file (multipart) with Authorization:
+  token => decode => user_id
+  file = request.files['file']
+  check file size <= MAX
+  s3_client = get_s3_client()
+  if s3_client and bucket configured:
+    key = generate unique key
+    s3_client.upload_fileobj(file, Bucket, key, ExtraArgs={'ACL':'public-read', 'ContentType': file.content_type})
+    file_url = build s3 url
+  else:
+    save file locally to server/storage/uploads/<filename>
+    file_url = '/uploads/files/' + filename
+  return { file_url, file_name, file_size }
+
+---
+
+## 7. Ngrok (mở public URL để dev/test)
+
+FUNCTION start_ngrok(app, port):
+  if NGROK_AUTH_TOKEN in env: set auth token in pyngrok
+  existing_tunnels = ngrok.get_tunnels()
+  if any tunnel.addr matches port: reuse and return public_url
+  else: tunnel = ngrok.connect(port, bind_tls=True)
+        public_url = tunnel.public_url
+        app.config['BASE_URL'] = public_url
+        return public_url
+
+---
+
+## 8. Lưu ý quan trọng (ngắn gọn)
+- Token blacklist hiện lưu in-memory -> không phù hợp cho nhiều instance (dùng Redis/DB nếu cần)
+- user_sockets là in-memory mapping -> dùng Redis + SocketIO message queue khi scale
+- Presigned URL giảm tải cho backend khi upload file lớn
+- CORS hiện đang permissive cho dev -> tighten trước khi production
+
+---
+
+File lưu tại `vsls:/docs/PSEUDOCODE.md` (đã tạo). Bạn muốn tôi:
+- Chuyển pseudocode thành flowchart/text sequence cụ thể?
+- Tạo phiên bản ngắn cho `README.md`?
+- Sinh script kiểm thử đơn giản cho luồng `send_message` (unit/integration)?

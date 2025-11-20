@@ -26,7 +26,7 @@ const formatFileSize = (bytes) => {
  * MessageBubble - Hiển thị một tin nhắn (sent hoặc received)
  * Props: { message, isSent, onReply, onReaction }
  */
-const MessageBubble = ({ message, isSent, onReply, onReaction, onEmojiHover, onRetry }) => {
+const MessageBubble = ({ message, isSent, isGroup, onReply, onReaction, onEmojiHover, onRetry }) => {
   const [showActions, setShowActions] = useState(false);
   // Detect if this message renders an image/sticker so we can remove
   // the surrounding bubble background (prevent the purple frame).
@@ -86,7 +86,13 @@ const MessageBubble = ({ message, isSent, onReply, onReaction, onEmojiHover, onR
         </div>
       )}
 
-  <div className={`message-content ${message.message_type === 'sticker' ? 'sticker-content' : ''}`}>
+      {/* In group chats, show the sender's nickname above received messages */}
+      {isGroup && !isSent && (
+        <div style={{ fontSize: 12, color: '#444', marginBottom: 4, fontWeight: 600 }}>
+          {message.display_name || message.sender_name || message.sender_username || 'User'}
+        </div>
+      )}
+    <div className={`message-content ${message.message_type === 'sticker' ? 'sticker-content' : ''}`}>
         {message.message_type === 'sticker' ? (
           // Hiển thị sticker: không còn nền bọc, chỉ show ảnh lớn hơn
           <div style={{ display: 'inline-block' }}>

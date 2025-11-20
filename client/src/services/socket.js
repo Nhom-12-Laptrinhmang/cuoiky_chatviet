@@ -133,6 +133,7 @@ export const sendMessage = (senderId, receiverId, content, opts = {}) => {
     client_message_id: opts.client_message_id || null,
     reply_to_id: opts.reply_to_id || null,
     forward_from_id: opts.forward_from_id || null,
+    group_id: opts.group_id || null,
   };
   sock.emit('send_message', payload);
   // debug output only in development
@@ -169,6 +170,7 @@ export const sendSticker = (senderId, receiverId, stickerId, stickerUrl, opts = 
     sticker_id: stickerId,
     sticker_url: stickerUrl,
     client_message_id: opts.client_message_id || null,
+    group_id: opts.group_id || null,
   };
   sock.emit('send_sticker', payload);
   if (isDev) {

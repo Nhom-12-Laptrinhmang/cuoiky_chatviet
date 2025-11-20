@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { groupAPI, userAPI } from '../../services/api';
 import { showToast, showSystemNotification } from '../../services/notifications';
+import './group-manage.css';
 
 const GroupManageModal = ({ isOpen, onClose, group, onUpdated }) => {
   const [members, setMembers] = useState([]);
@@ -64,18 +65,83 @@ const GroupManageModal = ({ isOpen, onClose, group, onUpdated }) => {
     }
     setSaving(true);
     try {
-      await groupAPI.addMembersToGroup(group.id, selectedToAdd);
+      // Capture list of IDs to add so we can use them after clearing selection
+      const idsToAdd = selectedToAdd.slice();
+      // Optimistic update: add selected users to members list immediately
+      const toAdd = idsToAdd.map((id) => {
+        const u = available.find(a => String(a.id) === String(id));
+        return {
+          id,
+          username: u?.username || `User ${id}`,
+          display_name: u?.display_name || u?.username || `User ${id}`,
+          avatar_url: u?.avatar_url || null,
+          role: 'member',
+        };
+      });
+      setMembers((m) => [...m, ...toAdd]);
+      // Remove newly added users from available list optimistically to avoid dupes
+      setAvailable((prev) => (prev || []).filter(u => !idsToAdd.includes(u.id)));
+      // Clear selection and show optimistic success to user
+      setSelectedToAdd([]);
       showToast('Nhóm', 'Đã thêm thành viên');
       showSystemNotification('Nhóm', 'Đã thêm thành viên');
-      // refresh members
-      const resp = await groupAPI.getGroupMembers(group.id);
-      setMembers(resp.data || []);
-      setSelectedToAdd([]);
+
+      console.debug('[GroupManageModal] Adding members payload (background):', { group_id: group.id, member_ids: idsToAdd });
+      const resp = await groupAPI.addMembersToGroup(group.id, idsToAdd);
+      console.debug('[GroupManageModal] addMembersToGroup response:', resp);
+      // On success, refresh members from server to get canonical data
+      try {
+        const membersResp = await groupAPI.getGroupMembers(group.id);
+        const latestMembers = membersResp.data || [];
+        setMembers(latestMembers);
+        // Refresh available users and remove any that are now members
+        try {
+          const availResp = await userAPI.getUsers();
+          const allUsers = availResp.data || [];
+          const memberIds = new Set((latestMembers || []).map(m => String(m.id)));
+          const filtered = allUsers.filter(u => !memberIds.has(String(u.id)));
+          setAvailable(filtered);
+        } catch (availErr) {
+          // If we cannot refresh users, attempt to filter existing available list
+          const memberIds = new Set((latestMembers || []).map(m => String(m.id)));
+          setAvailable((prev) => (prev || []).filter(u => !memberIds.has(String(u.id))));
+        }
+      } catch (refreshErr) {
+        // If refresh fails, keep optimistic members but log
+        console.warn('[GroupManageModal] Failed to refresh members after add:', refreshErr);
+      }
       if (onUpdated) onUpdated();
     } catch (e) {
       console.error('Add members failed', e);
-      showToast('Lỗi', 'Thêm thành viên thất bại');
-      showSystemNotification('Lỗi', 'Thêm thành viên thất bại');
+      console.error('[GroupManageModal] server response:', e?.response?.status, e?.response?.data);
+      // revert optimistic update
+      try {
+        const latest = await groupAPI.getGroupMembers(group.id);
+        setMembers(latest.data || []);
+        // refresh available list as well
+        try {
+          const availResp = await userAPI.getUsers();
+          const allUsers = availResp.data || [];
+          const memberIds = new Set((latest.data || []).map(m => String(m.id)));
+          setAvailable(allUsers.filter(u => !memberIds.has(String(u.id))));
+        } catch (availErr) {
+          // fallback: re-add previously-removed users back to available if we have them
+          setAvailable((prev) => {
+            const prevArr = prev || [];
+            const toRestore = (Array.isArray(selectedToAdd) ? selectedToAdd : []).map(id => {
+              const u = available.find(a => String(a.id) === String(id));
+              return u;
+            }).filter(Boolean);
+            return [...prevArr, ...toRestore];
+          });
+        }
+      } catch (refreshErr) {
+        // fallback: remove the optimistic entries we added
+        setMembers((prev) => prev.filter(m => !selectedToAdd.includes(m.id)));
+      }
+      // Log error but do not show a blocking toast (avoids confusing popup after optimistic success)
+      const serverMsg = e?.response?.data?.error || e?.response?.data?.detail || e?.response?.data?.message || e?.message;
+      console.warn('[GroupManageModal] addMembers error (non-blocking):', serverMsg);
     } finally {
       setSaving(false);
     }
@@ -136,25 +202,29 @@ const GroupManageModal = ({ isOpen, onClose, group, onUpdated }) => {
   };
 
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop gm-backdrop">
       <div className="modal medium-modal group-manage-modal">
-        <div className="modal-header">
-          <h3>Quản lý nhóm</h3>
-          <button className="close" onClick={onClose}>×</button>
-        </div>
-        <div className="modal-body">
-          <div style={{ marginBottom: 12 }}>
-            <strong>{group.name || group.group_name || `Nhóm ${group.id}`}</strong>
-            <div style={{ color: '#6b7280', fontSize: 13 }}>ID: {group.id}</div>
+        <div className="gm-header modal-header">
+          <div className="gm-header-left">
+            <h3 className="gm-title">Quản lý nhóm</h3>
+            <div className="gm-group-meta">
+              <strong className="gm-group-name">{group.name || group.group_name || `Nhóm ${group.id}`}</strong>
+              <div className="gm-group-id">ID: {group.id}</div>
+            </div>
           </div>
+          <div className="gm-header-right">
+            <button className="close gm-close" onClick={onClose}>×</button>
+          </div>
+        </div>
+        <div className="modal-body gm-body">
 
           {/* Modal chuyển owner khi owner rời nhóm */}
           {showTransferOwner && (
-            <div style={{ marginBottom: 16, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8, background: '#fffbe6' }}>
+            <div className="gm-transfer">
               <h4>Chọn thành viên mới làm chủ nhóm</h4>
-              <div style={{ margin: '8px 0' }}>
+              <div className="gm-transfer-list">
                 {members.filter(m => String(m.id) !== String(currentUserId)).map(m => (
-                  <label key={m.id} style={{ display: 'block', marginBottom: 8 }}>
+                  <label key={m.id} className="gm-radio-row">
                     <input
                       type="radio"
                       name="newOwner"
@@ -162,38 +232,36 @@ const GroupManageModal = ({ isOpen, onClose, group, onUpdated }) => {
                       checked={String(selectedNewOwner) === String(m.id)}
                       onChange={() => setSelectedNewOwner(m.id)}
                       disabled={saving}
-                    />{' '}
-                    {m.display_name || m.username}
+                    />
+                    <span className="gm-radio-label">{m.display_name || m.username}</span>
                   </label>
                 ))}
               </div>
-              <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+              <div className="gm-transfer-actions">
                 <button className="btn" onClick={handleTransferOwnerAndLeave} disabled={saving || !selectedNewOwner}>Chuyển quyền & rời nhóm</button>
                 <button className="btn btn-ghost" onClick={() => { setShowTransferOwner(false); setSelectedNewOwner(null); }} disabled={saving}>Hủy</button>
               </div>
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ margin: '6px 0' }}>Thành viên</h4>
-              {loading ? <p>Đang tải...</p> : (
-                <div style={{ maxHeight: 220, overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: 6, padding: 8 }}>
-                  {members.length === 0 ? <p style={{ color: '#9ca3af' }}>Chưa có thành viên</p> : members.map(m => (
-                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <img src={m.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.username||'U')}&background=667eea&color=fff`} style={{ width: 34, height: 34, borderRadius: 17 }} alt={m.username} />
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <div>{m.username}</div>
-                          {m.role === 'owner' && <div style={{ fontSize: 11, color: '#9ca3af' }}>Chủ nhóm</div>}
+          <div className="gm-columns">
+            <div className="gm-column gm-members">
+              <h4 className="gm-section-title">Thành viên</h4>
+              {loading ? <p className="gm-loading">Đang tải...</p> : (
+                <div className="gm-list gm-members-list">
+                  {members.length === 0 ? <p className="gm-empty">Chưa có thành viên</p> : members.map(m => (
+                    <div key={m.id} className="gm-member-item">
+                      <div className="gm-member-left">
+                        <img className="gm-avatar" src={m.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.username||'U')}&background=667eea&color=fff`} alt={m.username} />
+                        <div className="gm-member-info">
+                          <div className="gm-member-name">{m.display_name || m.username}</div>
+                          {m.role === 'owner' && <div className="gm-member-role">Chủ nhóm</div>}
                         </div>
                       </div>
-                      <div>
+                      <div className="gm-member-actions">
                         {String(m.id) === String(currentUserId) ? (
-                          // Current user can leave
                           <button className="btn btn-ghost" onClick={() => handleRemove(m.id)} disabled={saving}>Rời</button>
                         ) : (
-                          // Only owner can remove others
                           isOwner && <button className="btn btn-ghost" onClick={() => handleRemove(m.id)} disabled={saving}>Gỡ</button>
                         )}
                       </div>
@@ -204,18 +272,18 @@ const GroupManageModal = ({ isOpen, onClose, group, onUpdated }) => {
             </div>
 
             {isOwner && (
-            <div style={{ width: 320 }}>
-              <h4 style={{ margin: '6px 0' }}>Thêm thành viên</h4>
-              <div style={{ maxHeight: 220, overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: 6, padding: 8 }}>
-                {available.length === 0 ? <p style={{ color: '#9ca3af' }}>Không có người dùng để thêm</p> : available.map(u => (
-                  <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px' }}>
+            <div className="gm-column gm-add">
+              <h4 className="gm-section-title">Thêm thành viên</h4>
+              <div className="gm-list gm-available-list">
+                {available.length === 0 ? <p className="gm-empty">Không có người dùng để thêm</p> : available.map(u => (
+                  <label key={u.id} className="gm-available-row">
                     <input type="checkbox" checked={selectedToAdd.includes(u.id)} onChange={() => toggleSelect(u.id)} />
-                    <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.username||'U')}&background=667eea&color=fff`} style={{ width: 28, height: 28, borderRadius: 14 }} alt={u.username} />
-                    <span>{u.display_name || u.username}</span>
+                    <img className="gm-avatar-sm" src={u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.username||'U')}&background=667eea&color=fff`} alt={u.username} />
+                    <span className="gm-available-name">{u.display_name || u.username}</span>
                   </label>
                 ))}
               </div>
-              <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+              <div className="gm-actions">
                 <button className="btn" onClick={handleAdd} disabled={saving || selectedToAdd.length === 0}>{saving ? 'Đang...' : `Thêm (${selectedToAdd.length})`}</button>
                 <button className="btn btn-ghost" onClick={() => { setSelectedToAdd([]); }} disabled={saving}>Bỏ chọn</button>
               </div>

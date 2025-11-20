@@ -1,6 +1,6 @@
-from flask import Flask, request, make_response, send_from_directory
+from flask import Flask, request, make_response, send_from_directory, g
 from flask_socketio import SocketIO
-import sys, os
+import sys, os, time
 
 # Ensure the server package directory is on sys.path so imports like
 # `from config.settings import Config` (where config lives in server/config)
@@ -11,8 +11,99 @@ from config.settings import Config
 from config.database import db, migrate
 from services.network_setup import start_ngrok
 import logging
-import os
+from datetime import datetime
 from utils.logging_helpers import LoggingDedupFilter
+
+# Initialize Flask app
+# Serve client build (if present) as static files so the same public URL can serve frontend + API
+CLIENT_BUILD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'client', 'build'))
+if os.path.isdir(CLIENT_BUILD_DIR):
+    app = Flask(__name__, static_folder=CLIENT_BUILD_DIR, static_url_path='')
+else:
+    app = Flask(__name__)
+app.config.from_object(Config)
+
+# Initialize extensions
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# --- Logging Middleware ---
+from utils.logging_exchange import log_http_exchange, gen_request_id
+
+# Đặt middleware sau khi app đã được khởi tạo
+@app.before_request
+def start_request_logging():
+    g.request_id = gen_request_id()
+    g.time_start = datetime.utcnow().isoformat()
+    g.time_start_epoch = time.time()
+
+@app.after_request
+def after_request_logging(response):
+    user_id = None
+    # Lấy user_id nếu có (từ token hoặc session)
+    try:
+        from services.auth_service import decode_token
+        auth = request.headers.get('Authorization', '')
+        if auth.startswith('Bearer '):
+            token = auth.split(' ', 1)[1]
+            payload = decode_token(token)
+            if payload:
+                user_id = payload.get('user_id')
+    except Exception:
+        user_id = None
+    log_http_exchange(
+        event_name=f"HTTP {request.method} {request.path}",
+        user_id=user_id,
+        status=response.status_code,
+        extra={'response_length': response.content_length}
+    )
+    return response
+from flask import Flask, request, make_response, send_from_directory, g
+from flask_socketio import SocketIO
+import sys, os, time
+
+# Ensure the server package directory is on sys.path so imports like
+# `from config.settings import Config` (where config lives in server/config)
+# resolve when importing `server.app` from the project root.
+sys.path.insert(0, os.path.dirname(__file__))
+
+from config.settings import Config
+from config.database import db, migrate
+from services.network_setup import start_ngrok
+import logging
+from datetime import datetime
+from utils.logging_helpers import LoggingDedupFilter
+
+# --- Logging Middleware ---
+from utils.logging_exchange import log_http_exchange, gen_request_id
+
+# Đặt middleware sau khi app đã được khởi tạo
+@app.before_request
+def start_request_logging():
+    g.request_id = gen_request_id()
+    g.time_start = datetime.utcnow().isoformat()
+    g.time_start_epoch = time.time()
+
+@app.after_request
+def after_request_logging(response):
+    user_id = None
+    # Lấy user_id nếu có (từ token hoặc session)
+    try:
+        from services.auth_service import decode_token
+        auth = request.headers.get('Authorization', '')
+        if auth.startswith('Bearer '):
+            token = auth.split(' ', 1)[1]
+            payload = decode_token(token)
+            if payload:
+                user_id = payload.get('user_id')
+    except Exception:
+        user_id = None
+    log_http_exchange(
+        event_name=f"HTTP {request.method} {request.path}",
+        user_id=user_id,
+        status=response.status_code,
+        extra={'response_length': response.content_length}
+    )
+    return response
 
 # Initialize Flask app
 # Serve client build (if present) as static files so the same public URL can serve frontend + API
@@ -49,7 +140,7 @@ def add_cors_headers(response):
         # fallback to permissive during local development
         response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Credentials"] = "true"
-    response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
+    response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS,PATCH"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
     return response
 
@@ -65,7 +156,7 @@ def handle_preflight():
         else:
             resp.headers['Access-Control-Allow-Origin'] = '*'
         resp.headers['Access-Control-Allow-Credentials'] = 'true'
-        resp.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
+        resp.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS,PATCH'
         resp.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
         return resp
     
@@ -87,7 +178,7 @@ class _CORSMiddleware:
             if 'access-control-allow-credentials' not in header_names:
                 headers.append(('Access-Control-Allow-Credentials', 'true'))
             if 'access-control-allow-methods' not in header_names:
-                headers.append(('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS'))
+                headers.append(('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH'))
             if 'access-control-allow-headers' not in header_names:
                 headers.append(('Access-Control-Allow-Headers', 'Content-Type,Authorization'))
             return start_response(status, headers, exc_info)

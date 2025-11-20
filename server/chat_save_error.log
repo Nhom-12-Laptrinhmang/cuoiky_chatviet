@@ -124,3 +124,237 @@ WHERE block.user_id = ? AND block.target_id = ?
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
 
 -----------------------
+
+--- Chat save error (project) ---
+time: 2025-11-19T16:41:40.635337
+sender_id=6 receiver_id=6 client_message_id=client_1763570500558_zbl4erelh
+content repr: 'hiu'
+traceback:
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: attempt to write a readonly database
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/server/sockets/chat_events.py", line 343, in handle_send_message
+    db.session.commit()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1311, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1286, in _prepare_impl
+    self.session.flush()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
+    self._flush(objects)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
+    with util.safe_reraise():
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
+    flush_context.execute()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) attempt to write a readonly database
+[SQL: INSERT INTO message (sender_id, receiver_id, group_id, content, file_url, message_type, sticker_id, sticker_url, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: (6, 6, None, 'hiu', None, 'text', None, None, '2025-11-19 16:41:40.602140')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+-----------------------
+
+--- Chat save error (project) ---
+time: 2025-11-19T16:41:47.119414
+sender_id=6 receiver_id=13 client_message_id=client_1763570507102_a2roaauyy
+content repr: 'ghahdjad'
+traceback:
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: attempt to write a readonly database
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/server/sockets/chat_events.py", line 343, in handle_send_message
+    db.session.commit()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1311, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1286, in _prepare_impl
+    self.session.flush()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
+    self._flush(objects)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
+    with util.safe_reraise():
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
+    flush_context.execute()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) attempt to write a readonly database
+[SQL: INSERT INTO message (sender_id, receiver_id, group_id, content, file_url, message_type, sticker_id, sticker_url, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: (6, 13, None, 'ghahdjad', None, 'text', None, None, '2025-11-19 16:41:47.113317')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+-----------------------
+
+--- Chat save error (project) ---
+time: 2025-11-19T16:41:56.627638
+sender_id=6 receiver_id=13 client_message_id=client_1763570516604_mgf7vu47g
+content repr: '🤙👍👍👍'
+traceback:
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: attempt to write a readonly database
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/server/sockets/chat_events.py", line 343, in handle_send_message
+    db.session.commit()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1311, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1286, in _prepare_impl
+    self.session.flush()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
+    self._flush(objects)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
+    with util.safe_reraise():
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
+    flush_context.execute()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) attempt to write a readonly database
+[SQL: INSERT INTO message (sender_id, receiver_id, group_id, content, file_url, message_type, sticker_id, sticker_url, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: (6, 13, None, '🤙👍👍👍', None, 'text', None, None, '2025-11-19 16:41:56.622196')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+-----------------------

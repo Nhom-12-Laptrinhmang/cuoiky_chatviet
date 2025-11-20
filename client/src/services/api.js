@@ -257,7 +257,23 @@ export const groupAPI = {
   joinGroup: (groupId) => api.post(`/groups/${groupId}/join`),
   getMyGroups: () => api.get('/groups'),
   getGroupMembers: (groupId) => api.get(`/groups/${groupId}/members`),
-  addMembersToGroup: (groupId, memberIds) => api.post(`/groups/${groupId}/members`, { member_ids: memberIds }),
+  addMembersToGroup: async (groupId, memberIds) => {
+    // Try proxied API first; fall back to direct backend instance if proxy/method issues occur
+    try {
+      return await api.post(`/groups/${groupId}/members`, { member_ids: memberIds });
+    } catch (err) {
+      // If proxy returned 405 or similar, attempt direct backend call
+      try {
+        return await apiDirect.post(`/groups/${groupId}/members`, { member_ids: memberIds });
+      } catch (err2) {
+        // If original error was 405, try proxied api POST as last resort to preserve behavior
+        if (err?.response?.status === 405) {
+          return api.post(`/groups/${groupId}/members`, { member_ids: memberIds });
+        }
+        throw err; // rethrow original error for caller to handle
+      }
+    }
+  },
   removeMemberFromGroup: (groupId, userId) => api.delete(`/groups/${groupId}/members/${userId}`),
   getGroupMessages: (groupId) => api.get(`/groups/${groupId}/messages`),
 };

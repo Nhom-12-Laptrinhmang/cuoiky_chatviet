@@ -1,0 +1,539 @@
+2025-11-19 21:43:31,367 INFO __main__: Ngrok disabled (ENABLE_NGROK not set to 'true'). Running local only.
+2025-11-19 21:43:31,367 WARNING werkzeug: Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+ * Serving Flask app 'app'
+ * Debug mode: off
+2025-11-19 22:47:16,109 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=pphASMDQPW4XEDOKAAAB
+2025-11-19 22:47:16,137 INFO sockets.chat_events: [CHAT][JOIN] sid=pphASMDQPW4XEDOKAAAB data={'username': 'viet 2', 'room': 'chat_room'}
+2025-11-19 22:47:16,137 INFO sockets.chat_events: User joined room: chat_room
+2025-11-19 22:47:16,137 INFO sockets.chat_events: [CHAT][JOIN] sid=pphASMDQPW4XEDOKAAAB data={'username': 'viet 2', 'room': 'chat_room'}
+2025-11-19 22:47:16,138 INFO sockets.chat_events: [JOIN] END - SUCCESS user=None room=chat_room
+2025-11-19 22:47:16,138 INFO sockets.chat_events: User joined room: chat_room
+2025-11-19 22:47:16,140 INFO sockets.chat_events: [JOIN] END - SUCCESS user=None room=chat_room
+2025-11-19 23:10:47,843 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=vbz9_f3jZ4dEnhf6AAAD
+2025-11-19 23:10:47,864 INFO routes.messages: [MESSAGES] sender=6 receiver=35
+2025-11-19 23:10:47,866 INFO routes.messages: [MESSAGES] count=0
+2025-11-19 23:10:48,346 INFO sockets.chat_events: [CHAT][JOIN] sid=vbz9_f3jZ4dEnhf6AAAD data={'user_id': 6}
+2025-11-19 23:10:48,346 INFO sockets.chat_events: User joined room: user-6
+2025-11-19 23:10:48,350 INFO sockets.chat_events: [JOIN] END - SUCCESS user=6 room=user-6
+2025-11-19 23:10:48,360 INFO sockets.chat_events: [CHAT][JOIN] sid=vbz9_f3jZ4dEnhf6AAAD data={'user_id': 6}
+2025-11-19 23:10:48,360 INFO sockets.chat_events: User joined room: user-6
+2025-11-19 23:10:48,366 INFO sockets.chat_events: [JOIN] END - SUCCESS user=6 room=user-6
+2025-11-19 23:18:02,934 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=44JZicNrPTviRPd9AAAF
+2025-11-19 23:18:03,577 INFO sockets.chat_events: [CHAT][JOIN] sid=44JZicNrPTviRPd9AAAF data={'user_id': 10}
+2025-11-19 23:18:03,578 INFO sockets.chat_events: User joined room: user-10
+2025-11-19 23:18:03,581 INFO sockets.chat_events: [JOIN] END - SUCCESS user=10 room=user-10
+2025-11-19 23:18:04,635 INFO sockets.chat_events: [CHAT][JOIN] sid=44JZicNrPTviRPd9AAAF data={'user_id': 10}
+2025-11-19 23:18:04,636 INFO sockets.chat_events: User joined room: user-10
+2025-11-19 23:18:04,638 INFO sockets.chat_events: [JOIN] END - SUCCESS user=10 room=user-10
+2025-11-19 23:18:05,252 INFO sockets.chat_events: [CHAT][JOIN] sid=44JZicNrPTviRPd9AAAF data={'user_id': 10}
+2025-11-19 23:18:05,252 INFO sockets.chat_events: User joined room: user-10
+2025-11-19 23:18:05,255 INFO sockets.chat_events: [JOIN] END - SUCCESS user=10 room=user-10
+2025-11-19 23:18:06,231 INFO routes.messages: [MESSAGES] sender=10 receiver=30
+2025-11-19 23:18:06,237 INFO routes.messages: [MESSAGES] count=2
+2025-11-19 23:26:02,983 INFO routes.messages: [MESSAGES] sender=10 receiver=6
+2025-11-19 23:26:02,992 INFO routes.messages: [MESSAGES] count=1
+2025-11-19 23:26:07,924 INFO sockets.chat_events: [CHAT][DEBUG] incoming content repr='Hello' char_len=5 utf8_bytes=5
+2025-11-19 23:26:07,975 INFO sockets.chat_events: Message saved to DB: message_id=688 timestamp=2025-11-19 16:26:07.967878
+2025-11-19 23:26:07,976 INFO sockets.chat_events: Emitted message_id=688 to user-6
+2025-11-19 23:30:38,094 INFO routes.messages: [MESSAGES] sender=10 receiver=6
+2025-11-19 23:30:38,101 INFO routes.messages: [MESSAGES] count=2
+2025-11-19 23:35:42,986 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=qR32KVOx_s7n1KTQAAAH
+2025-11-19 23:35:43,031 INFO routes.messages: [MESSAGES] sender=6 receiver=35
+2025-11-19 23:35:43,032 INFO routes.messages: [MESSAGES] count=0
+2025-11-19 23:35:43,498 INFO sockets.chat_events: [CHAT][JOIN] sid=qR32KVOx_s7n1KTQAAAH data={'user_id': 6}
+2025-11-19 23:35:43,498 INFO sockets.chat_events: User joined room: user-6
+2025-11-19 23:35:43,500 INFO sockets.chat_events: [JOIN] END - SUCCESS user=6 room=user-6
+2025-11-19 23:35:43,509 INFO sockets.chat_events: [CHAT][JOIN] sid=qR32KVOx_s7n1KTQAAAH data={'user_id': 6}
+2025-11-19 23:35:43,509 INFO sockets.chat_events: User joined room: user-6
+2025-11-19 23:35:43,512 INFO sockets.chat_events: [JOIN] END - SUCCESS user=6 room=user-6
+2025-11-19 23:36:09,889 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=iQWP6aqxSOn2O-UZAAAJ
+2025-11-19 23:36:09,959 INFO routes.messages: [MESSAGES] sender=6 receiver=35
+2025-11-19 23:36:10,018 INFO routes.messages: [MESSAGES] count=5
+2025-11-19 23:36:10,418 INFO sockets.chat_events: [CHAT][JOIN] sid=iQWP6aqxSOn2O-UZAAAJ data={'user_id': 6}
+2025-11-19 23:36:10,419 INFO sockets.chat_events: User joined room: user-6
+2025-11-19 23:36:10,419 INFO sockets.chat_events: [CHAT][JOIN] sid=iQWP6aqxSOn2O-UZAAAJ data={'user_id': 6}
+2025-11-19 23:36:10,421 INFO sockets.chat_events: User joined room: user-6
+2025-11-19 23:36:10,422 INFO sockets.chat_events: [JOIN] END - SUCCESS user=6 room=user-6
+2025-11-19 23:36:10,425 INFO sockets.chat_events: [JOIN] END - SUCCESS user=6 room=user-6
+2025-11-19 23:36:42,261 ERROR app: Exception on /register [POST]
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: attempt to write a readonly database
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/server/routes/auth/register.py", line 19, in register
+    result = register_user(username, password, display_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/server/services/auth_service.py", line 16, in register_user
+    db.session.commit()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1311, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1286, in _prepare_impl
+    self.session.flush()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
+    self._flush(objects)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
+    with util.safe_reraise():
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
+    flush_context.execute()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) attempt to write a readonly database
+[SQL: INSERT INTO user (username, password_hash, avatar_url, display_name, gender, birthdate, phone_number, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('nguyenvana1', 'scrypt:32768:8:1$I31MBXuoamtaZzZP$7d95505dffef0f0dd44eea94ef485e9a4c05524a87de72596fbabd5692dc0f70adaf77da113d77d3cd308b37e79ef0979f2d7cc1275c6f65f760ede849e3a62c', None, 'Nguyễn Văn A', None, None, None, 'offline', '2025-11-19 16:36:42.260072')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-11-19 23:36:57,621 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=MFRTb7oPpswh8xxnAAAL
+2025-11-19 23:36:57,681 INFO routes.messages: [MESSAGES] sender=6 receiver=35
+2025-11-19 23:36:57,682 INFO routes.messages: [MESSAGES] count=0
+2025-11-19 23:36:58,121 INFO sockets.chat_events: [CHAT][JOIN] sid=MFRTb7oPpswh8xxnAAAL data={'user_id': 6}
+2025-11-19 23:36:58,121 INFO sockets.chat_events: User joined room: user-6
+2025-11-19 23:36:58,125 INFO sockets.chat_events: [JOIN] END - SUCCESS user=6 room=user-6
+2025-11-19 23:36:58,162 INFO sockets.chat_events: [CHAT][JOIN] sid=MFRTb7oPpswh8xxnAAAL data={'user_id': 6}
+2025-11-19 23:36:58,162 INFO sockets.chat_events: User joined room: user-6
+2025-11-19 23:36:58,164 INFO sockets.chat_events: [JOIN] END - SUCCESS user=6 room=user-6
+2025-11-19 23:36:58,175 INFO sockets.chat_events: [CHAT][JOIN] sid=MFRTb7oPpswh8xxnAAAL data={'user_id': 6}
+2025-11-19 23:36:58,175 INFO sockets.chat_events: User joined room: user-6
+2025-11-19 23:36:58,183 INFO sockets.chat_events: [JOIN] END - SUCCESS user=6 room=user-6
+2025-11-19 23:41:02,933 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=rHleXqf2CqF1YhZ7AAAN
+2025-11-19 23:41:03,328 INFO sockets.chat_events: [CHAT][JOIN] sid=rHleXqf2CqF1YhZ7AAAN data={'username': 'Van', 'room': 'chat_room'}
+2025-11-19 23:41:03,328 INFO sockets.chat_events: User joined room: chat_room
+2025-11-19 23:41:03,328 INFO sockets.chat_events: [JOIN] END - SUCCESS user=None room=chat_room
+2025-11-19 23:41:03,822 INFO sockets.chat_events: [CHAT][JOIN] sid=rHleXqf2CqF1YhZ7AAAN data={'username': 'Van', 'room': 'chat_room'}
+2025-11-19 23:41:03,823 INFO sockets.chat_events: User joined room: chat_room
+2025-11-19 23:41:03,823 INFO sockets.chat_events: [JOIN] END - SUCCESS user=None room=chat_room
+2025-11-19 23:41:39,122 INFO routes.messages: [MESSAGES] sender=6 receiver=6
+2025-11-19 23:41:39,126 INFO routes.messages: [MESSAGES] count=0
+2025-11-19 23:41:40,588 INFO sockets.chat_events: [CHAT][DEBUG] incoming content repr='hiu' char_len=3 utf8_bytes=3
+2025-11-19 23:41:40,611 ERROR sockets.chat_events: Error saving message to DB: (sqlite3.OperationalError) attempt to write a readonly database
+[SQL: INSERT INTO message (sender_id, receiver_id, group_id, content, file_url, message_type, sticker_id, sticker_url, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: (6, 6, None, 'hiu', None, 'text', None, None, '2025-11-19 16:41:40.602140')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: attempt to write a readonly database
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/server/sockets/chat_events.py", line 343, in handle_send_message
+    db.session.commit()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1311, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1286, in _prepare_impl
+    self.session.flush()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
+    self._flush(objects)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
+    with util.safe_reraise():
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
+    flush_context.execute()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) attempt to write a readonly database
+[SQL: INSERT INTO message (sender_id, receiver_id, group_id, content, file_url, message_type, sticker_id, sticker_url, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: (6, 6, None, 'hiu', None, 'text', None, None, '2025-11-19 16:41:40.602140')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-11-19 23:41:41,668 INFO sockets.chat_events: [CHAT][DEBUG] incoming content repr='hdahdja' char_len=7 utf8_bytes=7
+[CHAT][NHẬN] [DISCONNECT] sid=pphASMDQPW4XEDOKAAAB
+[CHAT][GỬI] [DISCONNECT] END
+[CHAT][NHẬN] [TYPING] sender=6 receiver=35 typing=False
+[CHAT][GỬI] user_typing -> room=user-35
+[CHAT][NHẬN] [COMMAND] from sid=vbz9_f3jZ4dEnhf6AAAD payload={'action': 'GET_CONTACTS_LIST', 'data': {}, 'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo2LCJleHAiOjE3NjM2NDc1MjR9.5Wpi_RaaITr3LgJNFNzbBZ1psoC79eQqPO9Db_2_lK4'}
+[CHAT][GỬI] [COMMAND] CONTACTS_LIST_RESULT sent to sid=vbz9_f3jZ4dEnhf6AAAD
+[LOGIN] username=peanut
+[LOGIN] success=True
+[LOGIN] ✅ user_id=10
+[CHAT][NHẬN] [TYPING] sender=10 receiver=30 typing=False
+[CHAT][GỬI] user_typing -> room=user-30
+[CHAT][NHẬN] [COMMAND] from sid=44JZicNrPTviRPd9AAAF payload={'action': 'GET_CONTACTS_LIST', 'data': {}, 'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMCwiZXhwIjoxNzYzNjU1NDgyfQ.Mfnjr_tTbIMUs6g3M24yCpSBu7nNbDXXJ8-l3dDKKy8'}
+[CHAT][GỬI] [COMMAND] CONTACTS_LIST_RESULT sent to sid=44JZicNrPTviRPd9AAAF
+[CHAT][NHẬN] [TYPING] sender=10 receiver=6 typing=False
+[CHAT][GỬI] user_typing -> room=user-6
+[CHAT][NHẬN] [TYPING] sender=10 receiver=6 typing=True
+[CHAT][GỬI] user_typing -> room=user-6
+[DEBUG SEND_MESSAGE] received sender=10 receiver=6 client_msg_id=client_1763569567888_uzamm0348 content_repr='Hello'
+[CHAT][NHẬN] [TYPING] sender=10 receiver=6 typing=False
+[CHAT][GỬI] user_typing -> room=user-6
+[DEBUG SEND_MESSAGE] attempting to save to DB...
+[DEBUG SEND_MESSAGE] DB commit succeeded, msg.id= 688
+[CHAT][NHẬN] [TYPING] sender=10 receiver=6 typing=False
+[CHAT][GỬI] user_typing -> room=user-6
+[CHAT][NHẬN] [TYPING] sender=10 receiver=6 typing=False
+[CHAT][GỬI] user_typing -> room=user-6
+[CHAT][NHẬN] [TYPING] sender=10 receiver=6 typing=False
+[CHAT][GỬI] user_typing -> room=user-6
+[CHAT][NHẬN] [COMMAND] from sid=44JZicNrPTviRPd9AAAF payload={'action': 'GET_CONTACTS_LIST', 'data': {}, 'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMCwiZXhwIjoxNzYzNjU1NDgyfQ.Mfnjr_tTbIMUs6g3M24yCpSBu7nNbDXXJ8-l3dDKKy8'}
+[CHAT][GỬI] [COMMAND] CONTACTS_LIST_RESULT sent to sid=44JZicNrPTviRPd9AAAF
+[CHAT][NHẬN] [COMMAND] from sid=44JZicNrPTviRPd9AAAF payload={'action': 'BLOCK_USER', 'data': {'target': 6}, 'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMCwiZXhwIjoxNzYzNjU1NDgyfQ.Mfnjr_tTbIMUs6g3M24yCpSBu7nNbDXXJ8-l3dDKKy8'}
+[CHAT][NHẬN] [COMMAND] from sid=44JZicNrPTviRPd9AAAF payload={'action': 'UNBLOCK_USER', 'data': {'target': 6}, 'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMCwiZXhwIjoxNzYzNjU1NDgyfQ.Mfnjr_tTbIMUs6g3M24yCpSBu7nNbDXXJ8-l3dDKKy8'}
+[CHAT][NHẬN] [COMMAND] from sid=44JZicNrPTviRPd9AAAF payload={'action': 'BLOCK_USER', 'data': {'target': 6}, 'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMCwiZXhwIjoxNzYzNjU1NDgyfQ.Mfnjr_tTbIMUs6g3M24yCpSBu7nNbDXXJ8-l3dDKKy8'}
+[BLOCK] Error adding block: (sqlite3.OperationalError) attempt to write a readonly database
+[SQL: INSERT INTO block (user_id, target_id, created_at) VALUES (?, ?, ?)]
+[parameters: (10, 6, '2025-11-19 16:30:19.693407')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+[CHAT][NHẬN] [COMMAND] from sid=44JZicNrPTviRPd9AAAF payload={'action': 'UNBLOCK_USER', 'data': {'target': 6}, 'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMCwiZXhwIjoxNzYzNjU1NDgyfQ.Mfnjr_tTbIMUs6g3M24yCpSBu7nNbDXXJ8-l3dDKKy8'}
+[CHAT][NHẬN] [TYPING] sender=10 receiver=6 typing=False
+[CHAT][GỬI] user_typing -> room=user-6
+[CHAT][NHẬN] [COMMAND] from sid=44JZicNrPTviRPd9AAAF payload={'action': 'BLOCK_USER', 'data': {'target': 6}, 'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMCwiZXhwIjoxNzYzNjU1NDgyfQ.Mfnjr_tTbIMUs6g3M24yCpSBu7nNbDXXJ8-l3dDKKy8'}
+[CHAT][NHẬN] [COMMAND] from sid=44JZicNrPTviRPd9AAAF payload={'action': 'UNBLOCK_USER', 'data': {'target': 6}, 'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMCwiZXhwIjoxNzYzNjU1NDgyfQ.Mfnjr_tTbIMUs6g3M24yCpSBu7nNbDXXJ8-l3dDKKy8'}
+[CHAT][NHẬN] [DISCONNECT] sid=44JZicNrPTviRPd9AAAF
+[CHAT][NHẬN] ✅ Removed user_id=10 from mapping
+[CHAT][GỬI] user_offline emitted for 10 to user-6
+[CHAT][GỬI] user_offline emitted for 10 to user-11
+[CHAT][GỬI] user_offline emitted for 10 to user-13
+[CHAT][GỬI] user_offline emitted for 10 to user-14
+[CHAT][GỬI] user_offline emitted for 10 to user-16
+[CHAT][GỬI] user_offline emitted for 10 to user-30
+[CHAT][GỬI] user_offline emitted for 10 to user-31
+[CHAT][GỬI] [DISCONNECT] END
+[CHAT][NHẬN] [DISCONNECT] sid=vbz9_f3jZ4dEnhf6AAAD
+[CHAT][NHẬN] ✅ Removed user_id=6 from mapping
+[CHAT][GỬI] user_offline emitted for 6 to user-10
+[CHAT][GỬI] user_offline emitted for 6 to user-13
+[CHAT][GỬI] user_offline emitted for 6 to user-17
+[CHAT][GỬI] user_offline emitted for 6 to user-19
+[CHAT][GỬI] user_offline emitted for 6 to user-30
+[CHAT][GỬI] user_offline emitted for 6 to user-31
+[CHAT][GỬI] [DISCONNECT] END
+[CHAT][NHẬN] [TYPING] sender=6 receiver=35 typing=False
+[CHAT][GỬI] user_typing -> room=user-35
+[CHAT][NHẬN] [DISCONNECT] sid=qR32KVOx_s7n1KTQAAAH
+[CHAT][NHẬN] ✅ Removed user_id=6 from mapping
+[CHAT][GỬI] user_offline emitted for 6 to user-10
+[CHAT][GỬI] user_offline emitted for 6 to user-13
+[CHAT][GỬI] user_offline emitted for 6 to user-17
+[CHAT][GỬI] user_offline emitted for 6 to user-19
+[CHAT][GỬI] user_offline emitted for 6 to user-30
+[CHAT][GỬI] user_offline emitted for 6 to user-31
+[CHAT][GỬI] [DISCONNECT] END
+[REGISTER] username=nguyenvana
+[REGISTER] success=True
+[REGISTER] user lookup failed
+[CHAT][NHẬN] [TYPING] sender=6 receiver=35 typing=False
+[CHAT][GỬI] user_typing -> room=user-35
+[CHAT][NHẬN] [COMMAND] from sid=iQWP6aqxSOn2O-UZAAAJ payload={'action': 'GET_CONTACTS_LIST', 'data': {}, 'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo2LCJleHAiOjE3NjM2NDc1MjR9.5Wpi_RaaITr3LgJNFNzbBZ1psoC79eQqPO9Db_2_lK4'}
+[CHAT][GỬI] [COMMAND] CONTACTS_LIST_RESULT sent to sid=iQWP6aqxSOn2O-UZAAAJ
+[CHAT][NHẬN] [COMMAND] from sid=iQWP6aqxSOn2O-UZAAAJ payload={'action': 'GET_CONTACTS_LIST', 'data': {}, 'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo2LCJleHAiOjE3NjM2NDc1MjR9.5Wpi_RaaITr3LgJNFNzbBZ1psoC79eQqPO9Db_2_lK4'}
+[CHAT][GỬI] [COMMAND] CONTACTS_LIST_RESULT sent to sid=iQWP6aqxSOn2O-UZAAAJ
+[REGISTER] username=nguyenvana
+[REGISTER] success=False
+[REGISTER] username=nguyenvana1
+[CHAT][NHẬN] [DISCONNECT] sid=iQWP6aqxSOn2O-UZAAAJ
+[CHAT][NHẬN] ✅ Removed user_id=6 from mapping
+[CHAT][GỬI] user_offline emitted for 6 to user-10
+[CHAT][GỬI] user_offline emitted for 6 to user-13
+[CHAT][GỬI] user_offline emitted for 6 to user-17
+[CHAT][GỬI] user_offline emitted for 6 to user-19
+[CHAT][GỬI] user_offline emitted for 6 to user-30
+[CHAT][GỬI] user_offline emitted for 6 to user-31
+[CHAT][GỬI] [DISCONNECT] END
+[LOGIN] username=admin@example.com
+[LOGIN] success=True
+[LOGIN] ✅ user_id=6
+[CHAT][NHẬN] [TYPING] sender=6 receiver=35 typing=False
+[CHAT][GỬI] user_typing -> room=user-35
+[CHAT][NHẬN] [TYPING] sender=6 receiver=35 typing=False
+[CHAT][GỬI] user_typing -> room=user-35
+[REGISTER] username=nguyenvana
+[REGISTER] success=False
+[REGISTER] username=nguyenvana123
+[REGISTER] success=True
+[REGISTER] user lookup failed
+[REGISTER] username=nguyenvana123
+[REGISTER] success=False
+[REGISTER] username=vana123
+[REGISTER] success=True
+[REGISTER] user_id=35 token=... (truncated)
+[CHAT][NHẬN] [TYPING] sender=6 receiver=35 typing=False
+[CHAT][GỬI] user_typing -> room=user-35
+[CHAT][NHẬN] [TYPING] sender=6 receiver=35 typing=False
+[CHAT][GỬI] user_typing -> room=user-35
+[CHAT][NHẬN] [TYPING] sender=6 receiver=6 typing=True
+[CHAT][GỬI] user_typing -> room=user-6
+[CHAT][NHẬN] [TYPING] sender=6 receiver=6 typing=False
+[CHAT][GỬI] user_typing -> room=user-6
+[DEBUG SEND_MESSAGE] received sender=6 receiver=6 client_msg_id=client_1763570500558_zbl4erelh content_repr='hiu'
+[DEBUG SEND_MESSAGE] attempting to save to DB...
+[CHAT][NHẬN] [TYPING] sender=6 receiver=6 typing=True
+[CHAT][GỬI] user_typing -> room=user-6
+2025-11-19 23:41:41,701 INFO sockets.chat_events: Message saved to DB: message_id=689 timestamp=2025-11-19 16:41:41.697370
+2025-11-19 23:41:41,702 INFO sockets.chat_events: Emitted message_id=689 to user-6
+2025-11-19 23:41:45,847 INFO routes.messages: [MESSAGES] sender=6 receiver=13
+2025-11-19 23:41:45,856 INFO routes.messages: [MESSAGES] count=18
+2025-11-19 23:41:47,110 INFO sockets.chat_events: [CHAT][DEBUG] incoming content repr='ghahdjad' char_len=8 utf8_bytes=8
+2025-11-19 23:41:47,113 ERROR sockets.chat_events: Error saving message to DB: (sqlite3.OperationalError) attempt to write a readonly database
+[SQL: INSERT INTO message (sender_id, receiver_id, group_id, content, file_url, message_type, sticker_id, sticker_url, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: (6, 13, None, 'ghahdjad', None, 'text', None, None, '2025-11-19 16:41:47.113317')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: attempt to write a readonly database
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/server/sockets/chat_events.py", line 343, in handle_send_message
+    db.session.commit()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1311, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1286, in _prepare_impl
+    self.session.flush()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
+    self._flush(objects)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
+    with util.safe_reraise():
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
+    flush_context.execute()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) attempt to write a readonly database
+[SQL: INSERT INTO message (sender_id, receiver_id, group_id, content, file_url, message_type, sticker_id, sticker_url, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: (6, 13, None, 'ghahdjad', None, 'text', None, None, '2025-11-19 16:41:47.113317')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-11-19 23:41:48,672 INFO sockets.chat_events: [CHAT][DEBUG] incoming content repr='😍' char_len=1 utf8_bytes=4
+2025-11-19 23:41:48,680 INFO sockets.chat_events: Message saved to DB: message_id=690 timestamp=2025-11-19 16:41:48.676579
+2025-11-19 23:41:48,681 INFO sockets.chat_events: Emitted message_id=690 to user-13
+2025-11-19 23:41:56,614 INFO sockets.chat_events: [CHAT][DEBUG] incoming content repr='🤙👍👍👍' char_len=4 utf8_bytes=16
+2025-11-19 23:41:56,622 ERROR sockets.chat_events: Error saving message to DB: (sqlite3.OperationalError) attempt to write a readonly database
+[SQL: INSERT INTO message (sender_id, receiver_id, group_id, content, file_url, message_type, sticker_id, sticker_url, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: (6, 13, None, '🤙👍👍👍', None, 'text', None, None, '2025-11-19 16:41:56.622196')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: attempt to write a readonly database
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/server/sockets/chat_events.py", line 343, in handle_send_message
+    db.session.commit()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1311, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1286, in _prepare_impl
+    self.session.flush()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
+    self._flush(objects)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
+    with util.safe_reraise():
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
+    flush_context.execute()
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) attempt to write a readonly database
+[SQL: INSERT INTO message (sender_id, receiver_id, group_id, content, file_url, message_type, sticker_id, sticker_url, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: (6, 13, None, '🤙👍👍👍', None, 'text', None, None, '2025-11-19 16:41:56.622196')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-11-19 23:42:34,946 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=J8NFFtlr7zJD4aiuAAAP
+2025-11-19 23:42:36,403 INFO sockets.chat_events: [CHAT][JOIN] sid=J8NFFtlr7zJD4aiuAAAP data={'user_id': 10}
+2025-11-19 23:42:36,405 INFO sockets.chat_events: User joined room: user-10
+2025-11-19 23:42:36,409 INFO sockets.chat_events: [JOIN] END - SUCCESS user=10 room=user-10
+2025-11-19 23:42:36,501 INFO sockets.chat_events: [CHAT][JOIN] sid=J8NFFtlr7zJD4aiuAAAP data={'user_id': 10}
+2025-11-19 23:42:36,501 INFO sockets.chat_events: User joined room: user-10
+2025-11-19 23:42:36,505 INFO sockets.chat_events: [JOIN] END - SUCCESS user=10 room=user-10
+2025-11-19 23:42:37,100 INFO sockets.chat_events: [CHAT][JOIN] sid=J8NFFtlr7zJD4aiuAAAP data={'user_id': 10}
+2025-11-19 23:42:37,100 INFO sockets.chat_events: User joined room: user-10
+2025-11-19 23:42:37,101 INFO sockets.chat_events: [JOIN] END - SUCCESS user=10 room=user-10
+2025-11-19 23:42:37,992 INFO routes.messages: [MESSAGES] sender=10 receiver=6
+2025-11-19 23:42:38,001 INFO routes.messages: [MESSAGES] count=5
+2025-11-20 00:30:24,238 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=U_FkPd5UUgg5A_aRAAAR
+2025-11-20 00:30:24,481 INFO sockets.chat_events: [CHAT][JOIN] sid=U_FkPd5UUgg5A_aRAAAR data={'username': 'Van', 'room': 'chat_room'}
+2025-11-20 00:30:24,481 INFO sockets.chat_events: User joined room: chat_room
+2025-11-20 00:30:24,482 INFO sockets.chat_events: [JOIN] END - SUCCESS user=None room=chat_room
+2025-11-20 00:30:25,024 INFO sockets.chat_events: [CHAT][JOIN] sid=U_FkPd5UUgg5A_aRAAAR data={'username': 'Van', 'room': 'chat_room'}
+2025-11-20 00:30:25,024 INFO sockets.chat_events: User joined room: chat_room
+2025-11-20 00:30:25,024 INFO sockets.chat_events: [JOIN] END - SUCCESS user=None room=chat_room
+bash: line 1: 44115 Killed: 9               "/Users/melaniepham/Documents/Viet/HK1 Năm 3/CUOI KY/Vietnam Chat/.venv/bin/python" -m server.app
