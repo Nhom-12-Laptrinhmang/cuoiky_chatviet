@@ -45,6 +45,30 @@ Project `Vietnam Chat` là ứng dụng chat full-stack gồm React frontend (`/
 
 **Chú ý:** script `./run_backend.sh` tạo virtualenv tại `./.venv` và cài `server/requirements.txt` tự động.
 
+### Yêu cầu hệ thống / thư viện native
+
+Một số package Python hoặc Node có thể yêu cầu thành phần native (build tools, header files, thư viện C) để biên dịch. Dưới đây là hướng dẫn cài trên các nền tảng:
+
+- Windows:
+	- Cài "Build Tools for Visual Studio" (chứa C++ build toolchain) để biên dịch native Node/Python extensions.
+	- Python dev headers thường có sẵn khi cài Python từ installer; nếu không, cài Python bằng installer chính thức.
+
+- macOS:
+	- Cài Xcode Command Line Tools:
+		```bash
+		xcode-select --install
+		```
+	- Với Homebrew, cài thêm các thư viện như `libjpeg`, `libpng`, `pkg-config` nếu cần.
+
+- Ubuntu/Debian:
+	- Cài các gói build and headers:
+		```bash
+		sudo apt update
+		sudo apt install -y build-essential python3-dev libssl-dev libffi-dev libjpeg-dev zlib1g-dev
+		```
+
+Nếu khi chạy `npm install` hoặc `pip install` gặp lỗi kiểu thiếu header (.h) hoặc lỗi biên dịch, đọc log để biết gói nào cần library hệ thống và cài thêm như hướng dẫn ở trên.
+
 ---
 
 ## Cài đặt nhanh
@@ -199,6 +223,27 @@ Sau khi ngrok mở, copy `https://...ngrok.io` và dùng làm `REACT_APP_API_URL
 lsof -ti:5000 | xargs kill -9
 lsof -ti:3000 | xargs kill -9
 ```
+
+### Về `stop_all` / dừng tiến trình trên Windows
+
+Trong repository có `stop_all.bat` (Windows) và `stop_all.sh` (Unix). Ở phiên bản hiện tại `stop_all.bat` sử dụng `taskkill /F /IM node.exe` và `taskkill /F /IM python.exe` để ép dừng mọi tiến trình `node`/`python`/`ngrok` trên hệ thống. Điều này nhanh nhưng không phân biệt tiến trình của project khác.
+
+An toàn hơn, bạn có thể dừng tiến trình theo `PID` hoặc theo `port`:
+
+- Tìm PID theo port (PowerShell):
+	```powershell
+	Get-NetTCPConnection -LocalPort 3000 | Select-Object -ExpandProperty OwningProcess
+	Get-NetTCPConnection -LocalPort 5000 | Select-Object -ExpandProperty OwningProcess
+	```
+
+- Dừng PID cụ thể:
+	```powershell
+	Stop-Process -Id <pid> -Force
+	# hoặc
+	taskkill /PID <pid> /F
+	```
+
+Trước khi chạy `stop_all.bat`, cân nhắc rằng nó sẽ dừng mọi tiến trình `node`/`python` đang chạy trên máy.
 
 - Nếu pyngrok/ngrok không hoạt động: chạy `ngrok` thủ công từ terminal.
 
