@@ -7,10 +7,15 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CLIENT_DIR="$ROOT_DIR/client"
 
 echo "🚀 Starting React Frontend..."
-echo "� Client dir: $CLIENT_DIR"
-echo "�📍 Port: 3000"
+echo "📁 Client dir: $CLIENT_DIR"
+echo "📍 Port: 3000"
 echo "🌐 URL: http://localhost:3000"
 echo ""
+
+# Kill any existing process on port 3000 to avoid "port already in use" errors
+echo "Cleaning up port 3000 (if in use)..."
+lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+sleep 1
 
 cd "$CLIENT_DIR"
 
