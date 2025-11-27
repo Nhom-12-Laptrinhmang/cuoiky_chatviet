@@ -384,6 +384,9 @@
   background: var(--bg-primary, white);
   overflow: hidden;
 }
+/* Allow flex children to shrink correctly and avoid pushing adjacent columns
+   when content grows (prevents side panels from being pushed up on new messages) */
+.chat-main { min-height: 0; }
 
 .chat-header {
   padding: 20px;
@@ -436,6 +439,8 @@
   gap: 12px;
   background: var(--bg-chat, white);
 }
+/* Ensure messages area doesn't auto-expand its parent when content grows */
+.messages-area { min-height: 0; }
 
 .messages-area::-webkit-scrollbar {
   width: 6px;

@@ -26,7 +26,60 @@ def list_my_groups():
     memberships = GroupMember.query.filter_by(user_id=uid).all()
     group_ids = [m.group_id for m in memberships]
     groups = Group.query.filter(Group.id.in_(group_ids)).all() if group_ids else []
-    return jsonify([{'id': g.id, 'name': g.name, 'owner_id': g.owner_id} for g in groups])
+    return jsonify([
+        {
+            'id': g.id,
+            'name': g.name,
+            'owner_id': g.owner_id,
+            'avatar_url': g.avatar_url,
+            'allow_edit_name_avatar': g.allow_edit_name_avatar
+        } for g in groups
+    ])
+# Thêm API cập nhật tên/avatar nhóm
+@groups_bp.route('/<int:group_id>', methods=['PATCH'])
+def update_group_info(group_id):
+    uid = current_user_from_request(request)
+    if not uid:
+        return jsonify({'error': 'Unauthorized'}), 401
+    group = Group.query.get(group_id)
+    if not group:
+        return jsonify({'error': 'Group not found'}), 404
+    # Chỉ owner hoặc admin mới được đổi config, còn đổi tên/avatar thì phải allow_edit_name_avatar
+    member = GroupMember.query.filter_by(group_id=group_id, user_id=uid).first()
+    if not member:
+        return jsonify({'error': 'Not a member of this group'}), 403
+    data = request.get_json() or {}
+    updated = False
+    # Đổi tên nhóm
+    if 'name' in data:
+        if group.allow_edit_name_avatar or member.role in ('owner', 'admin'):
+            group.name = data['name']
+            updated = True
+        else:
+            return jsonify({'error': 'Not allowed to edit group name'}), 403
+    # Đổi avatar nhóm
+    if 'avatar_url' in data:
+        if group.allow_edit_name_avatar or member.role in ('owner', 'admin'):
+            group.avatar_url = data['avatar_url']
+            updated = True
+        else:
+            return jsonify({'error': 'Not allowed to edit group avatar'}), 403
+    # Đổi quyền chỉnh sửa (chỉ owner/admin)
+    if 'allow_edit_name_avatar' in data:
+        if member.role in ('owner', 'admin'):
+            group.allow_edit_name_avatar = bool(data['allow_edit_name_avatar'])
+            updated = True
+        else:
+            return jsonify({'error': 'Not allowed to change edit permission'}), 403
+    if updated:
+        db.session.commit()
+    return jsonify({
+        'id': group.id,
+        'name': group.name,
+        'owner_id': group.owner_id,
+        'avatar_url': group.avatar_url,
+        'allow_edit_name_avatar': group.allow_edit_name_avatar
+    })
 
 
 @groups_bp.route('', methods=['POST'])

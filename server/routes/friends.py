@@ -25,9 +25,33 @@ def list_friends():
         return jsonify({'error': 'Unauthorized'}), 401
     # return accepted friends where user is involved
     rels = Friend.query.filter(((Friend.user_id == uid) | (Friend.friend_id == uid)), Friend.status == 'accepted').all()
-    friend_ids = [r.friend_id if r.user_id == uid else r.user_id for r in rels]
+    # collect friend ids (other side of relation)
+    friend_ids = []
+    for r in rels:
+        try:
+            other = r.friend_id if r.user_id == uid else r.user_id
+            if other not in friend_ids:
+                friend_ids.append(other)
+        except Exception:
+            continue
+
     users = User.query.filter(User.id.in_(friend_ids)).all() if friend_ids else []
-    return jsonify([{'id': u.id, 'username': u.username, 'avatar_url': u.avatar_url} for u in users])
+
+    # Return richer profile info for each friend (frontend expects display_name, status, etc.)
+    out = []
+    for u in users:
+        out.append({
+            'id': u.id,
+            'username': u.username,
+            'display_name': u.display_name if getattr(u, 'display_name', None) else u.username,
+            'avatar_url': u.avatar_url,
+            'status': getattr(u, 'status', None),
+            'gender': getattr(u, 'gender', None),
+            'phone_number': getattr(u, 'phone_number', None),
+            'created_at': getattr(u, 'created_at', None).isoformat() if getattr(u, 'created_at', None) and hasattr(u.created_at, 'isoformat') else None,
+        })
+
+    return jsonify(out)
 
 
 @friends_bp.route('/requests', methods=['GET'])

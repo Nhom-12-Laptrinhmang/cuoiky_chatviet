@@ -249,6 +249,64 @@ def register_chat_events(socketio):
                         logger.exception('Error emitting user_joined to friend %s', fid)
         except Exception:
             logger.exception('Error while notifying friends about user_joined')
+        # Update persistent user status immediately so REST endpoints reflect online state
+        try:
+            if user_id:
+                u = User.query.get(int(user_id))
+                if u:
+                    u.status = 'online'
+                    db.session.commit()
+                    logger.debug('Set User.%s status=online in DB', user_id)
+        except Exception:
+            db.session.rollback()
+            logger.exception('Failed to persist user online status for %s', user_id)
+
+        # Recompute group online status: if at least 2 members online -> group is online
+        try:
+            if user_id:
+                # find groups where this user is a member
+                gms = GroupMember.query.filter_by(user_id=int(user_id)).all()
+                group_ids = set([gm.group_id for gm in gms])
+                for gid in group_ids:
+                    try:
+                        members = GroupMember.query.filter_by(group_id=gid).all()
+                        online_count = 0
+                        for m in members:
+                            try:
+                                # prefer in-memory mapping for immediacy
+                                if str(m.user_id) in user_sockets or m.user_id in user_sockets:
+                                    online_count += 1
+                                else:
+                                    # fallback to DB status
+                                    mu = User.query.get(m.user_id)
+                                    if mu and mu.status == 'online':
+                                        online_count += 1
+                            except Exception:
+                                continue
+                        grp = Group.query.get(gid)
+                        if grp:
+                            new_status = 'online' if online_count >= 2 else 'offline'
+                            if getattr(grp, 'status', None) != new_status:
+                                try:
+                                    grp.status = new_status
+                                    db.session.commit()
+                                except Exception:
+                                    db.session.rollback()
+                                # notify group members about updated status (emit to each member's personal room)
+                                try:
+                                    for m in members:
+                                        try:
+                                            socketio.emit('group_updated', { 'group_id': gid, 'status': new_status }, room=f'user-{m.user_id}')
+                                        except Exception:
+                                            logger.exception('Failed to emit group_updated to user %s for group %s', m.user_id, gid)
+                                except Exception:
+                                    logger.exception('Failed to emit group_updated for %s', gid)
+                    except Exception:
+                        logger.exception('Error computing online count for group %s', gid)
+        except Exception:
+            logger.exception('Error while recomputing groups after join for user %s', user_id)
+        except Exception:
+            logger.exception('Error while notifying friends about user_joined')
         logger.info("[JOIN] END - SUCCESS user=%s room=%s", user_id, room_name)
 
     @socketio.on('send_message')
@@ -1057,6 +1115,54 @@ def register_chat_events(socketio):
                         print(f"[CHAT][GỬI] user_offline emitted for {removed_uid} to user-{fid}")
                     except Exception:
                         print(f"[CHAT][GỬI] Error emitting user_offline to user-{fid}")
+                # Persist offline status
+                try:
+                    u = User.query.get(int(removed_uid))
+                    if u:
+                        u.status = 'offline'
+                        db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                    print('[CHAT] Failed to persist user offline status for', removed_uid)
+                # Recompute group online status for groups the user belonged to
+                try:
+                    gms = GroupMember.query.filter_by(user_id=int(removed_uid)).all()
+                    group_ids = set([gm.group_id for gm in gms])
+                    for gid in group_ids:
+                        try:
+                            members = GroupMember.query.filter_by(group_id=gid).all()
+                            online_count = 0
+                            for m in members:
+                                try:
+                                    if str(m.user_id) in user_sockets or m.user_id in user_sockets:
+                                        online_count += 1
+                                    else:
+                                        mu = User.query.get(m.user_id)
+                                        if mu and mu.status == 'online':
+                                            online_count += 1
+                                except Exception:
+                                    continue
+                            grp = Group.query.get(gid)
+                            if grp:
+                                new_status = 'online' if online_count >= 2 else 'offline'
+                                if getattr(grp, 'status', None) != new_status:
+                                    try:
+                                        grp.status = new_status
+                                        db.session.commit()
+                                    except Exception:
+                                        db.session.rollback()
+                                    try:
+                                        for m in members:
+                                            try:
+                                                socketio.emit('group_updated', {'group_id': gid, 'status': new_status}, room=f'user-{m.user_id}')
+                                            except Exception:
+                                                print('[CHAT] Failed to emit group_updated to user', m.user_id)
+                                    except Exception:
+                                        print('[CHAT] Failed to emit group_updated for', gid)
+                        except Exception:
+                            print('[CHAT] Error recomputing online count for group', gid)
+                except Exception:
+                    print('[CHAT] Error while recomputing groups after disconnect for user', removed_uid)
             # also broadcast a generic offline event for compatibility
             emit('user_offline', {'sid': request.sid}, broadcast=True)
         except Exception:

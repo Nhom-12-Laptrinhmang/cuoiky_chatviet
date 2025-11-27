@@ -7,6 +7,7 @@ import ChatBox from './components/Chat/ChatBox';
 import ToastContainer from './components/Notifications/ToastContainer';
 import { LanguageProvider } from './i18n/LanguageContext';
 import { initializeFontSize } from './utils/fontSizeUtils';
+import GroupManagement from './components/GroupManagement';
 
 /**
  * ProtectedRoute - Kiểm tra nếu user đã đăng nhập
@@ -41,11 +42,12 @@ function App() {
       path: '/',
       element: <RootLayout />,
       children: [
-        { path: 'login', element: <LoginForm /> },
-        { path: 'register', element: <RegisterForm /> },
-        { path: 'forgot-password', element: <ForgotPassword /> },
-        { path: 'chat', element: <ProtectedRoute><ChatBox /></ProtectedRoute> },
-        { path: '/', element: <Navigate to="/login" /> },
+  { path: 'login', element: <LoginForm /> },
+  { path: 'register', element: <RegisterForm /> },
+  { path: 'forgot-password', element: <ForgotPassword /> },
+  { path: 'chat', element: <ProtectedRoute><ChatBox /></ProtectedRoute> },
+  { path: 'group-management', element: <ProtectedRoute><GroupManagement /></ProtectedRoute> },
+  { path: '/', element: <Navigate to="/login" /> },
       ],
     },
   ];

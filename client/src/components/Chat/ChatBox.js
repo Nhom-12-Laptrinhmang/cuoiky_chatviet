@@ -13,8 +13,9 @@ import AvatarModal from './AvatarModal';
 import EditProfileModal from './EditProfileModal';
 import AddFriendModal from './AddFriendModal';
 import CreateGroupModal from './CreateGroupModal';
+import AddMemberPopup from '../AddMemberPopup';
+import GroupInfoSidebar from './GroupInfoSidebar';
 import './chat-groups.css';
-import GroupManageModal from './GroupManageModal';
 import Settings from '../Settings/Settings';
 
 /**
@@ -22,6 +23,96 @@ import Settings from '../Settings/Settings';
  * Kết nối Socket.IO, hiển thị danh sách messages, gửi tin nhắn
  */
 const ChatBox = () => {
+  // State cho sidebar thành viên nhóm
+  const [sidebarGroupMembers, setSidebarGroupMembers] = useState(null);
+  const [sidebarMembers, setSidebarMembers] = useState([]);
+  const [sidebarAvailable, setSidebarAvailable] = useState([]);
+  const [sidebarSelectedToAdd, setSidebarSelectedToAdd] = useState([]);
+  const [sidebarLoading, setSidebarLoading] = useState(false);
+  const [sidebarSaving, setSidebarSaving] = useState(false);
+  const [sidebarCurrentUserId, setSidebarCurrentUserId] = useState(null);
+  const [sidebarGroupOwnerId, setSidebarGroupOwnerId] = useState(null);
+  const sidebarIsOwner = String(sidebarCurrentUserId) === String(sidebarGroupOwnerId);
+
+  useEffect(() => {
+    if (!sidebarGroupMembers) return;
+    setSidebarLoading(true);
+    (async () => {
+      try {
+        const resp = await groupAPI.getGroupMembers(sidebarGroupMembers.id);
+        const mems = resp.data || [];
+        setSidebarMembers(mems);
+        try {
+          const me = await userAPI.getCurrent();
+          setSidebarCurrentUserId(me.data?.id || null);
+          const ownerFromResp = mems.length > 0 ? mems[0].owner_id : null;
+          setSidebarGroupOwnerId(ownerFromResp);
+        } catch (e) {}
+        try {
+          const avail = await userAPI.getUsers();
+          const existingIds = new Set(mems.map(m => String(m.id)));
+          const filtered = (avail.data || []).filter(u => !existingIds.has(String(u.id)));
+          setSidebarAvailable(filtered);
+        } catch (e) {}
+      } catch (e) {
+        setSidebarMembers([]);
+      }
+      setSidebarLoading(false);
+    })();
+    setSidebarSelectedToAdd([]);
+  }, [sidebarGroupMembers]);
+
+
+  const sidebarToggleSelect = (id) => {
+    setSidebarSelectedToAdd(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const sidebarHandleAdd = async () => {
+    if (!sidebarSelectedToAdd.length) return;
+    setSidebarSaving(true);
+    try {
+      const idsToAdd = sidebarSelectedToAdd.slice();
+      const toAdd = idsToAdd.map((id) => {
+        const u = sidebarAvailable.find(a => String(a.id) === String(id));
+        return {
+          id,
+          username: u?.username || `User ${id}`,
+          display_name: u?.display_name || u?.username || `User ${id}`,
+          avatar_url: u?.avatar_url || null,
+          role: 'member',
+        };
+      });
+      setSidebarMembers((m) => [...m, ...toAdd]);
+      setSidebarAvailable((prev) => (prev || []).filter(u => !idsToAdd.includes(u.id)));
+      setSidebarSelectedToAdd([]);
+      await groupAPI.addMembersToGroup(sidebarGroupMembers.id, idsToAdd);
+      // refresh
+      const membersResp = await groupAPI.getGroupMembers(sidebarGroupMembers.id);
+      const latestMembers = membersResp.data || [];
+      setSidebarMembers(latestMembers);
+      const availResp = await userAPI.getUsers();
+      const allUsers = availResp.data || [];
+      const memberIds = new Set((latestMembers || []).map(m => String(m.id)));
+      const filtered = allUsers.filter(u => !memberIds.has(String(u.id)));
+      setSidebarAvailable(filtered);
+    } catch (e) {}
+    setSidebarSaving(false);
+  };
+
+  const sidebarHandleRemove = async (id) => {
+    setSidebarSaving(true);
+    try {
+      await groupAPI.removeMemberFromGroup(sidebarGroupMembers.id, id);
+      const membersResp = await groupAPI.getGroupMembers(sidebarGroupMembers.id);
+      setSidebarMembers(membersResp.data || []);
+      const availResp = await userAPI.getUsers();
+      const allUsers = availResp.data || [];
+      const memberIds = new Set((membersResp.data || []).map(m => String(m.id)));
+      const filtered = allUsers.filter(u => !memberIds.has(String(u.id)));
+      setSidebarAvailable(filtered);
+    } catch (e) {}
+    setSidebarSaving(false);
+  };
   const [users, setUsers] = useState([]);
   // Restore selectedUser from localStorage on mount
   const [selectedUser, setSelectedUser] = useState(() => {
@@ -46,7 +137,8 @@ const ChatBox = () => {
   const [blockedTargets, setBlockedTargets] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
-  const [filterTab, setFilterTab] = useState('conversations');
+  // filterTab: 'priority' (main conversations view), 'contacts' (friends only), 'all' (groups only)
+  const [filterTab, setFilterTab] = useState('priority');
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchContainerActive, setSearchContainerActive] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
@@ -56,6 +148,35 @@ const ChatBox = () => {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [otherProfileOpen, setOtherProfileOpen] = useState(false);
   const [otherProfileUser, setOtherProfileUser] = useState(null);
+  // Add-member popup state (open a modal to add members to a group)
+  const [showAddMemberPopup, setShowAddMemberPopup] = useState(false);
+  const [popupSearchUser, setPopupSearchUser] = useState('');
+  const [popupUserList, setPopupUserList] = useState([]);
+  const [popupSelectedUsers, setPopupSelectedUsers] = useState([]);
+  const [popupSaving, setPopupSaving] = useState(false);
+  const [popupGroupForAdd, setPopupGroupForAdd] = useState(null);
+  // When popup is open and search term changes, fetch users
+  useEffect(() => {
+    let mounted = true;
+    if (!showAddMemberPopup) return;
+    if (!popupSearchUser) {
+      setPopupUserList([]);
+      return;
+    }
+    (async () => {
+      try {
+        const resp = await fetch(`/users?search=${encodeURIComponent(popupSearchUser)}`);
+        if (!mounted) return;
+        if (resp.ok) {
+          const data = await resp.json();
+          setPopupUserList(data || []);
+        }
+      } catch (e) {
+        console.error('user search failed', e);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [popupSearchUser, showAddMemberPopup]);
   
   // Create an inline SVG data URL with initials as a robust fallback
   const createInitialsDataUrl = (name, bg = '#667eea', color = '#fff', size = 128) => {
@@ -197,8 +318,16 @@ const ChatBox = () => {
   const [activeNav, setActiveNav] = useState(filterTab);
   useEffect(() => {
     // keep nav active in sync when switching tabs programmatically
-    if (filterTab === 'conversations' || filterTab === 'contacts') setActiveNav(filterTab);
+    if (filterTab === 'priority' || filterTab === 'contacts') setActiveNav(filterTab);
   }, [filterTab]);
+
+  // Derived lists for rendering to make tab behavior explicit and robust.
+  // - priority: show merged conversations (users array already contains merged groups when loaded)
+  // - contacts: users list when tab is 'contacts' (loadListForTab populates friends)
+  // - all: prefer `groups` state, fallback to any `users` entries with `is_group` set
+  const usersForPriority = users || [];
+  const friendsForContacts = users || [];
+  const groupsForAll = (groups && groups.length > 0) ? groups : (users || []).filter(u => u.is_group);
 
   // Global presence event listener: update users quickly when presence changes are dispatched
   useEffect(() => {
@@ -1239,6 +1368,18 @@ const ChatBox = () => {
         const name = payload?.group_name || payload?.name || 'Nhóm';
         showToast('Cập nhật nhóm', `${name} đã được cập nhật`);
         showSystemNotification('Cập nhật nhóm', `${name} đã được cập nhật`);
+        try {
+          const gid = payload?.group_id;
+          const status = payload?.status;
+          if (gid && typeof status === 'string') {
+            // update groups state
+            setGroups((prev = []) => (prev || []).map(g => (String(g.id) === String(gid) ? { ...g, status } : g)));
+            // also update users list entries that represent groups
+            setUsers((prev = []) => (prev || []).map(u => (u.is_group && String(u.id) === String(gid) ? { ...u, status } : u)));
+          }
+        } catch (e) {
+          if (isDev) console.debug('Error handling group_updated payload', e);
+        }
       });
 
       sock.off('group_created');
@@ -1286,7 +1427,33 @@ const ChatBox = () => {
     const fetchGroups = async () => {
       try {
         const resp = await groupAPI.getMyGroups();
-        setGroups((resp.data || []).map(normalizeGroup));
+        const normalized = (resp.data || []).map(normalizeGroup);
+        setGroups(normalized);
+        // If we're showing the main conversations tab, also merge groups into
+        // the primary `users` list so groups show inline with 1:1 chats.
+        try {
+          if (filterTab === 'priority') {
+            setUsers((prev = []) => {
+              // Build conversation-like entries for groups matching the shape
+              // used by the conversation list rendering.
+              const groupItems = (normalized || []).map(g => ({
+                id: g.id,
+                username: null,
+                display_name: g.group_name || g.display_name || `Nhóm ${g.id}`,
+                last_message: g.last_message || null,
+                status: g.status || 'offline',
+                is_group: true,
+              }));
+              // Merge while avoiding duplicate ids
+              const existingIds = new Set((prev || []).map(u => String(u.id)));
+              // Prepend groups so they are visible near the top of the list
+              const groupsToAdd = (groupItems || []).filter(gi => !existingIds.has(String(gi.id)));
+              return [...groupsToAdd, ...prev];
+            });
+          }
+        } catch (e) {
+          // ignore merge errors
+        }
       } catch (err) {
         console.error('Lỗi tải nhóm:', err);
       }
@@ -1349,7 +1516,7 @@ const ChatBox = () => {
 
     const loadListForTab = async () => {
       try {
-          if (filterTab === 'conversations') {
+          if (filterTab === 'priority') {
           // fetch conversation summaries for current user
           const resp = await messageAPI.getConversations();
           // map conversations to items for the list
@@ -1375,7 +1542,27 @@ const ChatBox = () => {
               is_group: true,
             };
           });
-          setUsers(convs);
+          // Merge groups into convs so priority view contains both 1:1 and groups
+          let merged = convs.slice();
+          try {
+            const gResp = await groupAPI.getMyGroups();
+            const normalized = (gResp.data || []).map(normalizeGroup);
+            const groupItems = (normalized || []).map(g => ({
+              id: g.id,
+              username: null,
+              display_name: g.group_name || g.display_name || `Nhóm ${g.id}`,
+              last_message: g.last_message || null,
+              status: g.status || 'offline',
+              is_group: true,
+            }));
+            // Prepend groups that aren't already in convs so groups appear earlier
+            const existingIds = new Set((merged || []).map(u => String(u.id)));
+            const groupsToPrepend = (groupItems || []).filter(gi => !existingIds.has(String(gi.id)));
+            merged = [...groupsToPrepend, ...merged];
+          } catch (e) {
+            // ignore group merge failures
+          }
+          setUsers(merged);
         } else if (filterTab === 'contacts') {
           // Request contacts via socket command (GET_CONTACTS_LIST). Fallback to REST if token missing.
           const token = localStorage.getItem('token');
@@ -1388,8 +1575,28 @@ const ChatBox = () => {
             setUsers((resp.data || []).map(u => mergeWithLocalCache(Object.assign({}, u))));
           }
         } else {
-          const resp = await userAPI.getUsers();
-          setUsers((resp.data || []).map(u => mergeWithLocalCache(Object.assign({}, u))));
+          // 'all' tab: show groups only (as requested). Fall back to showing all users if groups fail.
+          if (filterTab === 'all') {
+            try {
+              const resp = await groupAPI.getMyGroups();
+              const normalized = (resp.data || []).map(normalizeGroup);
+              const groupItems = (normalized || []).map(g => ({
+                id: g.id,
+                username: null,
+                display_name: g.group_name || g.display_name || `Nhóm ${g.id}`,
+                last_message: g.last_message || null,
+                status: g.status || 'offline',
+                is_group: true,
+              }));
+              setUsers(groupItems);
+            } catch (e) {
+              const resp = await userAPI.getUsers();
+              setUsers((resp.data || []).map(u => mergeWithLocalCache(Object.assign({}, u))));
+            }
+          } else {
+            const resp = await userAPI.getUsers();
+            setUsers((resp.data || []).map(u => mergeWithLocalCache(Object.assign({}, u))));
+          }
         }
       } catch (err) {
         console.error('Lỗi tải danh sách cho tab:', err);
@@ -1420,7 +1627,7 @@ const ChatBox = () => {
           setUsers(resp.data || []);
         } else {
           // reload according to current tab
-          if (filterTab === 'conversations') {
+          if (filterTab === 'priority') {
             const resp = await messageAPI.getConversations();
             const convs = (resp.data || []).map((c) => {
               if (c.type === 'user') {
@@ -1440,13 +1647,44 @@ const ChatBox = () => {
                 is_group: true,
               };
             });
-            setUsers(convs);
+            // Merge groups into convs
+            let merged = convs.slice();
+            try {
+              const gResp = await groupAPI.getMyGroups();
+              const normalized = (gResp.data || []).map(normalizeGroup);
+              const groupItems = (normalized || []).map(g => ({
+                id: g.id,
+                username: null,
+                display_name: g.group_name || g.display_name || `Nhóm ${g.id}`,
+                last_message: g.last_message || null,
+                status: g.status || 'offline',
+                is_group: true,
+              }));
+              const existingIds = new Set((merged || []).map(u => String(u.id)));
+              for (const gi of groupItems) if (!existingIds.has(String(gi.id))) merged.push(gi);
+            } catch (e) {}
+            setUsers(merged);
           } else if (filterTab === 'contacts') {
             const resp = await userAPI.getFriends();
             setUsers(resp.data || []);
           } else {
-            const resp = await userAPI.getUsers();
-            setUsers(resp.data || []);
+            // 'all' -> groups only
+            try {
+              const resp = await groupAPI.getMyGroups();
+              const normalized = (resp.data || []).map(normalizeGroup);
+              const groupItems = (normalized || []).map(g => ({
+                id: g.id,
+                username: null,
+                display_name: g.group_name || g.display_name || `Nhóm ${g.id}`,
+                last_message: g.last_message || null,
+                status: g.status || 'offline',
+                is_group: true,
+              }));
+              setUsers(groupItems);
+            } catch (e) {
+              const resp = await userAPI.getUsers();
+              setUsers(resp.data || []);
+            }
           }
         }
       } catch (err) {
@@ -1706,7 +1944,7 @@ const ChatBox = () => {
         setMessages((prev) => [...prev, fileMessage]);
         if (isDev) console.debug('[FILE_UPLOAD] Added optimistic message to UI');
   // Update conversation preview immediately for file sends
-  updateConversationPreview(fileMessage);
+        updateConversationPreview(fileMessage);
         // keep input focused after file send
         setTimeout(() => {
           try {
@@ -1871,14 +2109,14 @@ const ChatBox = () => {
         </div>
         <div className="nav-icons">
           <button
-            className={`nav-btn ${activeNav === 'conversations' ? 'active' : ''}`}
+            className={`nav-btn ${activeNav === 'priority' ? 'active' : ''}`}
             title="Tin nhắn"
             onClick={() => {
               // show conversations (people/groups you've messaged)
-              setFilterTab('conversations');
-              setActiveNav('conversations');
+              setFilterTab('priority');
+              setActiveNav('priority');
             }}
-            style={{ filter: activeNav === 'conversations' ? 'brightness(1.08)' : 'none' }}
+            style={{ filter: activeNav === 'priority' ? 'brightness(1.08)' : 'none' }}
           >💬</button>
           <button
             className={`nav-btn ${activeNav === 'contacts' ? 'active' : ''}`}
@@ -2018,46 +2256,41 @@ const ChatBox = () => {
       <AddFriendModal isOpen={addFriendOpen} onClose={() => setAddFriendOpen(false)} />
       <CreateGroupModal isOpen={createGroupOpen} onClose={() => setCreateGroupOpen(false)} onCreated={(g) => {
         if (g) {
-          setGroups(prev => [g, ...(prev||[])]);
+          const normalized = normalizeGroup(g);
+          setGroups(prev => [normalized, ...(prev||[])]);
           try {
             // Select the new group immediately so user sees the group chat
-            setSelectedGroup(g);
+            setSelectedGroup(normalized);
             setSelectedUser(null);
           } catch (e) {}
+
+          // Also insert into the main `users` list where appropriate so it
+          // appears immediately for the user without needing a refresh.
+          setUsers((prev = []) => {
+            // Build a conversation-like entry for the group
+            const entry = {
+              id: normalized.id,
+              username: null,
+              display_name: normalized.group_name || normalized.display_name || `Nhóm ${normalized.id}`,
+              last_message: normalized.last_message || null,
+              status: normalized.status || 'offline',
+              is_group: true,
+            };
+            // If current view is 'priority' or 'all' (groups view), show it.
+            if (filterTab === 'priority' || filterTab === 'all') {
+              const existingIds = new Set((prev || []).map(u => String(u.id)));
+              if (!existingIds.has(String(entry.id))) return [entry, ...prev];
+            }
+            return prev;
+          });
         }
         setCreateGroupOpen(false);
       }} />
-      <GroupManageModal 
-        isOpen={manageGroupId !== null} 
-        onClose={() => {
-          setManageGroupId(null);
-          setManageGroupData(null);
-        }}
-        group={manageGroupData}
-        onUpdated={(info) => {
-          // Refresh groups list
-          const refreshGroups = async () => {
-            try {
-              const resp = await groupAPI.getMyGroups();
-              setGroups((resp.data || []).map(normalizeGroup));
-            } catch (err) {
-              console.error('Error refreshing groups:', err);
-            }
-          };
-          refreshGroups();
-          // If the current user left the group, deselect it so UI returns to chat list
-          try {
-            if (info && info.left && selectedGroup && String(selectedGroup.id) === String(info.groupId)) {
-              setSelectedGroup(null);
-            }
-          } catch (e) {}
-        }}
-      />
 
       {/* Conversation list (center column) */}
       <aside className="chat-sidebar conversation-list">
         <div className="sidebar-header">
-          <h2>{filterTab === 'contacts' ? '👥 Bạn bè' : '💬 Danh sách'}</h2>
+          <h2>{filterTab === 'contacts' ? '👥 Bạn bè' : (filterTab === 'all' ? ' Nhóm' : ' Chat Việt')}</h2>
         </div>
         <div className="search-box" onMouseEnter={() => setSearchContainerActive(true)} onMouseLeave={() => setSearchContainerActive(false)}>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
@@ -2082,7 +2315,7 @@ const ChatBox = () => {
                 onClick={() => setAddFriendOpen(true)}
                 style={{ background: 'transparent', border: 'none', padding: 6, cursor: 'pointer' }}
               >
-                <i className="fa-solid fa-user-plus" aria-hidden="true" style={{ fontSize: 18, background: 'none', border: 'none', display: 'inline-block' }} />
+                <span aria-hidden="true" style={{ fontSize: 18, background: 'none', border: 'none', display: 'inline-block' }}>👤</span>
               </button>
               <button
                 aria-label="Tạo nhóm"
@@ -2091,15 +2324,15 @@ const ChatBox = () => {
                 onClick={() => setCreateGroupOpen(true)}
                 style={{ background: 'transparent', border: 'none', padding: 6, cursor: 'pointer' }}
               >
-                <i className="fa-solid fa-users" aria-hidden="true" style={{ fontSize: 18, background: 'none', border: 'none', display: 'inline-block' }} />
+                <span aria-hidden="true" style={{ fontSize: 18, background: 'none', border: 'none', display: 'inline-block' }}>👥</span>
               </button>
             </div>
           </div>
         </div>
         <div className="filter-bar">
           <button className={`filter ${filterTab==='priority'?'active':''}`} onClick={() => setFilterTab('priority')}>Ưu tiên</button>
-          <button className={`filter ${filterTab==='others'?'active':''}`} onClick={() => setFilterTab('others')}>Khác</button>
-          <button className={`filter ${filterTab==='all'?'active':''}`} onClick={() => setFilterTab('all')}>Tất cả</button>
+          <button className={`filter ${filterTab==='contacts'?'active':''}`} onClick={() => setFilterTab('contacts')}>Bạn bè</button>
+          <button className={`filter ${filterTab==='all'?'active':''}`} onClick={() => setFilterTab('all')}>Nhóm</button>
         </div>
         <div className="users-list" onMouseEnter={() => setSearchContainerActive(true)} onMouseLeave={() => setSearchContainerActive(false)}>
           {searchFocused && !searchQuery.trim() && showSuggestions && (
@@ -2296,14 +2529,14 @@ const ChatBox = () => {
               )}
             </>
           )}
-          {(!searchFocused || searchQuery.trim()) && filterTab === 'conversations' && users.map((user) => (
+          {(!searchFocused || searchQuery.trim()) && filterTab === 'priority' && users.map((user) => (
             <div
               key={user.id}
-              className={`conversation-item ${selectedUser?.id === user.id ? 'active' : ''}`}
-              onClick={() => handleSelectUser(user)}
+              className={`conversation-item ${selectedUser?.id === user.id || selectedGroup?.id === user.id ? 'active' : ''}`}
+              onClick={() => { if (user?.is_group) handleSelectGroup(user); else handleSelectUser(user); }}
               style={{position:'relative', opacity: blockedTargets.includes(String(user.id)) ? 0.6 : 1}}
             >
-              <div className="conv-avatar" onClick={(e) => { e.stopPropagation(); openUserProfile(user.id); }} style={{cursor:'pointer'}}>
+              <div className="conv-avatar" onClick={(e) => { e.stopPropagation(); if (user?.is_group) handleSelectGroup(user); else openUserProfile(user.id); }} style={{cursor:'pointer'}}>
                   <img
                     alt={user?.display_name || user?.username}
                     // start with placeholder initials, then background-load final avatar and swap
@@ -2317,13 +2550,47 @@ const ChatBox = () => {
               </div>
                   <div className="conv-body">
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
-                  <div className="conv-title" onClick={(e) => { e.stopPropagation(); if (!user.is_group) openUserProfile(user.id); }} style={{cursor: user.is_group ? 'default' : 'pointer'}}>{user.display_name || user.username}</div>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    {user.is_group && <span title="Nhóm" style={{fontSize:14, marginRight:6}}>🧑‍🤝‍🧑</span>}
+                    <div className="conv-title" onClick={(e) => { e.stopPropagation(); if (!user.is_group) openUserProfile(user.id); }} style={{cursor: user.is_group ? 'default' : 'pointer'}}>{user.display_name || user.username}</div>
+                  </div>
                   {blockedTargets.includes(String(user.id)) && <span style={{fontSize:'10px', color:'#ef4444', fontWeight:'600'}}>🚫 Đã chặn</span>}
                   <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6}}>
                     <span style={{fontSize:'11px', fontWeight:'500', color: user.status === 'online' ? '#16a34a' : '#9ca3af'}}>{user.status === 'online' ? '🟢 Online' : '⚪ Offline'}</span>
                   </div>
                 </div>
                 <div className="conv-preview" style={{color: user.last_message ? '#1f2937' : '#9ca3af', fontWeight: user.last_message ? '500' : '400'}}>{user.last_message || (user.status === 'online' ? 'Đang online' : 'Chưa có tin nhắn')}</div>
+              </div>
+            </div>
+          ))}
+
+          {(!searchFocused || searchQuery.trim()) && filterTab === 'all' && groupsForAll.map((group) => (
+            <div
+              key={group.id}
+              className={`conversation-item ${selectedGroup?.id === group.id ? 'active' : ''}`}
+              onClick={() => handleSelectGroup(group)}
+              style={{position:'relative'}}
+            >
+              <div className="conv-avatar" onClick={(e) => { e.stopPropagation(); handleSelectGroup(group); }} style={{cursor:'pointer'}}>
+                <img
+                  alt={group.display_name || group.group_name}
+                  src={buildAvatarSrc(group.avatar_url || createInitialsDataUrl(group.display_name || group.group_name || 'Nhóm', '#667eea', '#fff'))}
+                  data-user-id={group.id}
+                  onError={(e) => { try { e.target.onerror = null; e.target.src = createInitialsDataUrl(group.display_name || group.group_name || 'Nhóm', '#667eea', '#fff'); } catch(err){} }}
+                  style={{width:'40px',height:'40px',borderRadius:20,objectFit:'cover',display:'block'}}
+                />
+              </div>
+              <div className="conv-body">
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <span title="Nhóm" style={{fontSize:14, marginRight:6}}>🧑‍🤝‍🧑</span>
+                    <div className="conv-title" style={{cursor:'default'}}>{group.display_name || group.group_name}</div>
+                  </div>
+                  <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6}}>
+                    <span style={{fontSize:'11px', fontWeight:'500', color: group.status === 'online' ? '#16a34a' : '#9ca3af'}}>{group.status === 'online' ? '🟢 Hoạt động' : '⚪ Offline'}</span>
+                  </div>
+                </div>
+                <div className="conv-preview" style={{color: group.last_message ? '#1f2937' : '#9ca3af', fontWeight: group.last_message ? '500' : '400'}}>{group.last_message || 'Chưa có tin nhắn'}</div>
               </div>
             </div>
           ))}
@@ -2383,11 +2650,11 @@ const ChatBox = () => {
               {users.map((user) => (
                 <div
                   key={user.id}
-                  className={`conversation-item ${selectedUser?.id === user.id ? 'active' : ''}`}
-                  onClick={() => handleSelectUser(user)}
+                  className={`conversation-item ${selectedUser?.id === user.id || selectedGroup?.id === user.id ? 'active' : ''}`}
+                  onClick={() => { if (user?.is_group) handleSelectGroup(user); else handleSelectUser(user); }}
                   style={{position:'relative', opacity: blockedTargets.includes(String(user.id)) ? 0.6 : 1}}
                 >
-                  <div className="conv-avatar" onClick={(e) => { e.stopPropagation(); openUserProfile(user.id); }} style={{cursor:'pointer'}}>
+                  <div className="conv-avatar" onClick={(e) => { e.stopPropagation(); if (user?.is_group) handleSelectGroup(user); else openUserProfile(user.id); }} style={{cursor:'pointer'}}>
                     <img
                       alt={user?.display_name || user?.username}
                       src={buildAvatarSrc(user?.avatar_url || createInitialsDataUrl(user?.username||user?.display_name||'U', '#667eea', '#fff'))}
@@ -2417,71 +2684,58 @@ const ChatBox = () => {
             </div>
           )}
         </div>
-        <div className={`groups-section ${groupsCollapsed ? 'collapsed' : ''}`}>
-          <div className="groups-header">
-            <div className="groups-header-left">
-              <h3>Nhóm</h3>
-            </div>
-            <div className="groups-header-center">
-              <button
-                className={`btn-collapse ${groupsCollapsed ? 'collapsed' : ''}`}
-                onClick={() => setGroupsCollapsed(v => !v)}
-                title={groupsCollapsed ? 'Mở rộng' : 'Thu gọn'}
-                aria-pressed={groupsCollapsed}
-              >
-                <svg className="arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="34" height="34">
-                  <path d="M7 10l5 5 5-5" fill="none" />
-                </svg>
-              </button>
-            </div>
-            <div className="groups-header-actions">
-              <button
-                className="btn-create-group"
-                onClick={async () => {
-                  const name = window.prompt('Tên nhóm mới:');
-                  if (!name) return;
-                  try {
-                    await groupAPI.createGroup(name);
-                    const resp = await groupAPI.getMyGroups();
-                    setGroups((resp.data || []).map(normalizeGroup));
-                    showToast('Nhóm', 'Đã tạo nhóm');
-                    showSystemNotification('Nhóm', 'Đã tạo nhóm');
-                  } catch (err) {
-                    showToast('Nhóm', 'Lỗi tạo nhóm');
-                    showSystemNotification('Nhóm', 'Lỗi tạo nhóm');
-                  }
-                }}
-              >
-                Tạo
-              </button>
-            </div>
-          </div>
-          <div className="groups-list">
-            {groups.map((g) => (
-              <div
-                key={g.id}
-                className={`group-item ${selectedGroup?.id === g.id ? 'active' : ''}`}
-                onClick={() => handleSelectGroup(g)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
-              >
-                <span style={{flex:1}}>{g.group_name || g.display_name || g.name || `Nhóm ${g.id}`}</span>
-                <div style={{display:'flex', gap:8}}>
-                  <button
-                    className="btn-group-members"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setManageGroupData(normalizeGroup(g));
-                      setManageGroupId(g.id);
-                    }}
-                  >
-                    Thành viên
-                  </button>
+      {/* Sidebar hiển thị thành viên nhóm nếu sidebarGroupMembers có giá trị */}
+      </aside>
+      {sidebarGroupMembers && (
+        <aside className="chat-sidebar group-members-sidebar">
+          <div style={{padding:16}}>
+            <h3>Thành viên nhóm</h3>
+            {sidebarLoading ? <p>Đang tải...</p> : (
+              <div>
+                {sidebarMembers.length === 0 ? <p>Chưa có thành viên</p> : sidebarMembers.map(m => (
+                  <div key={m.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #eee'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:10}}>
+                      <img src={m.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.username||'U')}&background=667eea&color=fff`} alt={m.username} style={{width:32,height:32,borderRadius:8}} />
+                      <div>
+                        <div style={{fontWeight:600}}>{m.display_name || m.username}</div>
+                        {m.role === 'owner' && <div style={{fontSize:12,color:'#9ca3af'}}>Chủ nhóm</div>}
+                      </div>
+                    </div>
+                    <div>
+                      {String(m.id) === String(sidebarCurrentUserId) ? (
+                        <button className="btn btn-ghost" onClick={() => sidebarHandleRemove(m.id)} disabled={sidebarSaving}>Rời</button>
+                      ) : (
+                        sidebarIsOwner && <button className="btn btn-ghost" onClick={() => sidebarHandleRemove(m.id)} disabled={sidebarSaving}>Gỡ</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {sidebarIsOwner && (
+              <div style={{marginTop:16}}>
+                <h4>Thêm thành viên</h4>
+                <div>
+                  {sidebarAvailable.length === 0 ? <p>Không có người dùng để thêm</p> : sidebarAvailable.map(u => (
+                    <label key={u.id} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0'}}>
+                      <input type="checkbox" checked={sidebarSelectedToAdd.includes(u.id)} onChange={() => sidebarToggleSelect(u.id)} />
+                      <img src={u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.username||'U')}&background=667eea&color=fff`} alt={u.username} style={{width:24,height:24,borderRadius:6}} />
+                      <span>{u.display_name || u.username}</span>
+                    </label>
+                  ))}
+                </div>
+                <div style={{marginTop:8,display:'flex',gap:8}}>
+                  <button className="btn" onClick={sidebarHandleAdd} disabled={sidebarSaving || sidebarSelectedToAdd.length === 0}>{sidebarSaving ? 'Đang...' : `Thêm (${sidebarSelectedToAdd.length})`}</button>
+                  <button className="btn btn-ghost" onClick={() => { setSidebarSelectedToAdd([]); }} disabled={sidebarSaving}>Bỏ chọn</button>
                 </div>
               </div>
-            ))}
+            )}
+            <div style={{marginTop:12,display:'flex',justifyContent:'flex-end',gap:8}}>
+              <button className="btn btn-ghost" onClick={() => setSidebarGroupMembers(null)} disabled={sidebarSaving}>Đóng</button>
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      )}
 
       {/* Main Chat Area */}
       <main className="chat-main">
@@ -2936,6 +3190,29 @@ const ChatBox = () => {
         )}
       </main>
 
+      {/* Group Info Sidebar (right side) */}
+      {selectedGroup && (
+        <GroupInfoSidebar
+          group={selectedGroup}
+          currentUserId={currentUserId}
+          onChangeAvatar={() => { setManageGroupId(selectedGroup.id); setManageGroupData(normalizeGroup(selectedGroup)); }}
+          onChangeName={() => { setManageGroupId(selectedGroup.id); setManageGroupData(normalizeGroup(selectedGroup)); }}
+          onToggleNotification={() => showToast('Chưa hỗ trợ', 'Tắt thông báo cho nhóm chưa được triển khai')}
+          onPinGroup={() => showToast('Chưa hỗ trợ', 'Ghim nhóm chưa được triển khai')}
+          onOpenAddMember={() => {
+            // Open the add-member modal popup instead of the inline sidebar
+            try {
+              setPopupGroupForAdd(selectedGroup);
+              setPopupSelectedUsers([]);
+              setPopupSearchUser('');
+              setPopupUserList([]);
+              setShowAddMemberPopup(true);
+            } catch (err) { console.error(err); }
+          }}
+          onOpenManageGroup={() => { setManageGroupId(selectedGroup.id); setManageGroupData(normalizeGroup(selectedGroup)); }}
+        />
+      )}
+
       {/* Confirm Dialog */}
       {confirmDialog.open && (
         <div style={{
@@ -2996,6 +3273,58 @@ const ChatBox = () => {
           </div>
         </div>
       )}
+
+      {/* Add Member Popup (portal) */}
+      <AddMemberPopup
+        open={showAddMemberPopup}
+        userList={popupUserList}
+        selectedUsers={popupSelectedUsers}
+        onSelectUser={(id) => setPopupSelectedUsers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])}
+        onClose={() => setShowAddMemberPopup(false)}
+        saving={popupSaving}
+        onConfirm={async () => {
+          if (!popupSelectedUsers.length || !popupGroupForAdd) return;
+          setPopupSaving(true);
+          try {
+            const token = localStorage.getItem('token');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const resp = await fetch(`/groups/${popupGroupForAdd.id}/members`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ member_ids: popupSelectedUsers })
+            });
+
+            let body = null;
+            try { body = await resp.json(); } catch (err) { body = null; }
+
+            if (resp.ok) {
+              showToast('Nhóm', 'Đã thêm thành viên');
+              try {
+                // refresh sidebar members if it's open
+                const membersResp = await fetch(`/groups/${popupGroupForAdd.id}/members`, { headers });
+                if (membersResp.ok) {
+                  const mems = await membersResp.json();
+                  setSidebarMembers(mems || []);
+                }
+              } catch (e) {}
+            } else {
+              const errMsg = (body && (body.error || body.message || body.detail)) ? (body.error || body.message || body.detail) : `Thêm thành viên thất bại (status ${resp.status})`;
+              console.warn('[AddMember] failed', resp.status, body);
+              showToast('Lỗi', errMsg);
+            }
+          } catch (e) {
+            console.error('add members failed', e);
+            showToast('Lỗi', 'Thêm thành viên thất bại');
+          } finally {
+            setPopupSaving(false);
+            setShowAddMemberPopup(false);
+          }
+        }}
+        searchUser={popupSearchUser}
+        setSearchUser={setPopupSearchUser}
+      />
       {/* Dev debug panel removed per user request */}
 
       {/* Settings Modal */}

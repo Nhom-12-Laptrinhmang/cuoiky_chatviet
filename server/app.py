@@ -309,6 +309,33 @@ if os.environ.get('LOG_SHOW_ACCESS', 'false').lower() != 'true':
     logging.getLogger('engineio').setLevel(logging.WARNING)
     logging.getLogger('socketio').setLevel(logging.WARNING)
 
+# Reduce noisy SQLAlchemy engine logging (shows full SQL statements otherwise)
+logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
+
+# Global concise exception handler - returns a short JSON error and logs a compact message.
+from flask import jsonify
+import traceback as _traceback
+
+@app.errorhandler(Exception)
+def handle_unhandled_exception(e):
+    try:
+        # Include basic request info for debugging instead of full traceback
+        req_path = getattr(request, 'path', '')
+        req_method = getattr(request, 'method', '')
+        # Log exception with a short message and the exception type
+        logger.exception('Unhandled exception: %s %s -> %s', req_method, req_path, str(e))
+        # Return concise error message to client
+        msg = str(e)
+        # If it's an SQLAlchemy OperationalError, shorten message to avoid giant trace
+        if 'OperationalError' in str(type(e)) and hasattr(e, 'orig'):
+            msg = getattr(e.orig, 'args', [str(e)])[-1]
+    except Exception:
+        # Fallback minimal response if logging fails
+        msg = 'Internal server error'
+    # Return JSON with short message and 500 status (or use e.code if present)
+    status_code = getattr(e, 'code', 500)
+    return jsonify({'error': str(msg)}), status_code
+
 if __name__ == "__main__":
     try:
         # Determine port early so ngrok can use the same port
