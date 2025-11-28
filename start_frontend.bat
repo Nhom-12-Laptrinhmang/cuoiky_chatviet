@@ -28,7 +28,7 @@ if exist "%~dp0run_frontend.bat" (
   )
 
   REM Use doubled quotes to embed inner quoted commands for cmd /k
-  start "Vietnam Chat - Frontend" cmd /k ""cd /d "%~dp0client" && npm install && set "REACT_APP_API_URL=http://localhost:5000" && set "REACT_APP_SOCKET_URL=http://localhost:5000" && npm start""
+  start "Vietnam Chat - Frontend" cmd /k "cd /d "%~dp0client" && npm install && set "REACT_APP_API_URL=http://localhost:5000" && set "REACT_APP_SOCKET_URL=http://localhost:5000" && npm start"
 )
 
 ENDLOCAL

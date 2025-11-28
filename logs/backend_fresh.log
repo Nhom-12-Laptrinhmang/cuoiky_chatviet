@@ -1,0 +1,13 @@
+2025-11-28 07:50:01,168 INFO __main__: Ngrok disabled (ENABLE_NGROK not set to 'true'). Running local only.
+ * Serving Flask app 'app'
+ * Debug mode: off
+2025-11-28 07:50:08,960 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=CqJnSsT1WywtuuUtAAAB
+2025-11-28 08:23:29,466 INFO sockets.chat_events: [CHAT][CONNECT] Connected from 127.0.0.1 sid=ZruuX4Wm0-WqjAa_AAAD
+2025-11-28 08:23:29,982 INFO sockets.chat_events: [CHAT][JOIN] sid=ZruuX4Wm0-WqjAa_AAAD data={'user_id': 6}
+2025-11-28 08:23:29,982 INFO sockets.chat_events: User joined room: user-6
+2025-11-28 08:23:30,020 INFO sockets.chat_events: [JOIN] END - SUCCESS user=6 room=user-6
+2025-11-28 08:23:30,039 INFO sockets.chat_events: [CHAT][JOIN] sid=ZruuX4Wm0-WqjAa_AAAD data={'user_id': 6}
+2025-11-28 08:23:30,039 INFO sockets.chat_events: User joined room: user-6
+2025-11-28 08:23:30,063 INFO sockets.chat_events: [JOIN] END - SUCCESS user=6 room=user-6
+2025-11-28 08:23:31,581 INFO routes.messages: [MESSAGES] sender=6 receiver=19
+2025-11-28 08:23:31,603 INFO routes.messages: [MESSAGES] count=88

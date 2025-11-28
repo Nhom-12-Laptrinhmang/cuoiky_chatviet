@@ -28,10 +28,39 @@ PY_BIN="$VENV_DIR/bin/python"
 DEFAULT_PORT=5000
 PORT=${BACKEND_PORT:-$DEFAULT_PORT}
 
-# If requested port is in use, find the next free port (5001, 5002, ...)
+# Before attempting to pick a free port, try to stop any process already
+# listening on the requested port so the backend can use it.
+echo "Checking for processes listening on port ${PORT}..."
+PIDS=$(lsof -tiTCP:${PORT} -sTCP:LISTEN 2>/dev/null || true)
+if [ -n "$PIDS" ]; then
+	echo "Found processes listening on port ${PORT}: $PIDS"
+	echo "Stopping processes..."
+	for pid in $PIDS; do
+		if [ -n "$pid" ]; then
+			kill "$pid" 2>/dev/null || true
+		fi
+	done
+	sleep 1
+
+	# Escalate if still present
+	if lsof -iTCP:${PORT} -sTCP:LISTEN -P >/dev/null 2>&1; then
+		echo "Processes still listening on ${PORT} — forcing kill"
+		PIDS=$(lsof -tiTCP:${PORT} -sTCP:LISTEN 2>/dev/null || true)
+		for pid in $PIDS; do
+			if [ -n "$pid" ]; then
+				kill -9 "$pid" 2>/dev/null || true
+			fi
+		done
+	fi
+else
+	echo "No process found listening on port ${PORT}"
+fi
+
+# If requested port is in use (after attempted kill), find the next free port
+# (5001, 5002, ...). This keeps the original behavior if the port remains busy.
 while lsof -iTCP:${PORT} -sTCP:LISTEN -P >/dev/null 2>&1; do
-	echo "⚠️  Port ${PORT} is in use — trying next port"
-	PORT=$((PORT+1))
+  echo "⚠️  Port ${PORT} is in use — trying next port"
+  PORT=$((PORT+1))
 done
 
 export BACKEND_PORT=$PORT

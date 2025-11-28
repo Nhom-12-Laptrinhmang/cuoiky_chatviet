@@ -32,6 +32,16 @@ if exist "requirements.txt" (
 )
 
 echo.
+REM Before starting: try to kill any process listening on the backend port
+set "PORT=%BACKEND_PORT%"
+if "%PORT%"=="" set "PORT=5000"
+echo Checking for processes listening on port %PORT%...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr /R /C:":%PORT% .*LISTENING"') do (
+    echo Found PID %%a listening on port %PORT% - killing...
+    taskkill /PID %%a /F >nul 2>&1 || echo Failed to kill PID %%a
+)
+
+echo.
 echo [3/3] Starting Flask server...
 echo.
 python app.py
