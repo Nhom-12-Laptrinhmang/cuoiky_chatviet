@@ -204,6 +204,7 @@ from routes.groups import groups_bp
 from routes.uploads import uploads_bp
 from routes.stickers import stickers_bp
 from routes.auth.me import auth_me_bp
+from routes.admin import admin_bp
 
 app.register_blueprint(auth_register_bp)
 app.register_blueprint(auth_login_bp)
@@ -217,6 +218,7 @@ app.register_blueprint(groups_bp)
 app.register_blueprint(uploads_bp)
 app.register_blueprint(stickers_bp)
 app.register_blueprint(auth_me_bp)
+app.register_blueprint(admin_bp)
 
 # Ensure DB tables exist for development convenience (creates missing tables).
 with app.app_context():
@@ -224,9 +226,10 @@ with app.app_context():
     try:
         from models.user_model import User
         from models.friend_model import Friend
-        from models.group_model import Group
+        from models.group_model import Group, GroupMember
         from models.message_model import Message
         from models.sticker_model import Sticker
+        from models.contact_model import Contact
     except Exception:
         # If imports fail, log and continue; create_all may still create available tables
         app.logger.debug('Model import failed during create_all prep')

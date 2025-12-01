@@ -795,31 +795,51 @@ const ChatBox = () => {
     onReceiveMessage((data) => {
       if (isDev) console.debug('[CHAT] Received message:', data);
       const isSent = data.sender_id === currentUserId;
-      setMessages((prev) => {
-        // If message with same id already exists, ignore
-        if (prev.some((m) => m.id === data.id)) return prev;
 
-        // Try to find an optimistic message to replace.
-        // For text messages we previously matched by content; for stickers match by sticker_id or sticker_url.
-        const optimisticIndex = prev.findIndex((m) => {
-          if (!m.isSent) return false;
-          // exact content match for text/emoji
-          if (m.content && data.content && m.content === data.content) return true;
-          // sticker match by sticker_id or sticker_url
-          if (data.message_type === 'sticker' && (m.sticker_id && data.sticker_id && String(m.sticker_id) === String(data.sticker_id))) return true;
-          if (data.message_type === 'sticker' && (m.sticker_url && data.sticker_url && m.sticker_url === data.sticker_url)) return true;
+      // Decide whether this incoming message belongs to the currently-open conversation.
+      const belongsToSelectedConversation = (() => {
+        try {
+          if (selectedGroup && selectedGroup.id) {
+            return String(data.group_id) === String(selectedGroup.id);
+          }
+          if (selectedUser && selectedUser.id) {
+            // exclude group messages when viewing a 1:1 conversation
+            if (data.group_id) return false;
+            return String(data.sender_id) === String(selectedUser.id) || String(data.receiver_id) === String(selectedUser.id);
+          }
           return false;
-        });
-
-        if (optimisticIndex !== -1) {
-          const copy = [...prev];
-          copy[optimisticIndex] = { ...data, isSent };
-          return copy;
+        } catch (e) {
+          return false;
         }
+      })();
 
-        return [...prev, { ...data, isSent }];
-      });
-      // Update conversation preview when a message is received
+      // Only append/replace messages in `messages` state if they belong to the currently-open conversation.
+      if (belongsToSelectedConversation) {
+        setMessages((prev) => {
+          // If message with same id already exists, ignore
+          if (prev.some((m) => m.id === data.id)) return prev;
+
+          // Try to find an optimistic message to replace.
+          const optimisticIndex = prev.findIndex((m) => {
+            if (!m.isSent) return false;
+            if (m.content && data.content && m.content === data.content) return true;
+            if (data.message_type === 'sticker' && (m.sticker_id && data.sticker_id && String(m.sticker_id) === String(data.sticker_id))) return true;
+            if (data.message_type === 'sticker' && (m.sticker_url && data.sticker_url && m.sticker_url === data.sticker_url)) return true;
+            return false;
+          });
+
+          if (optimisticIndex !== -1) {
+            const copy = [...prev];
+            copy[optimisticIndex] = { ...data, isSent };
+            return copy;
+          }
+
+          return [...prev, { ...data, isSent }];
+        });
+      }
+
+      // Always update conversation preview and show notifications even if the message
+      // is not open in the current view — this keeps the left-hand list and toasts in sync.
       updateConversationPreview(data);
         try {
           // If message is from someone else and not currently selected, show notification
@@ -2810,63 +2830,87 @@ const ChatBox = () => {
 
             {/* Messages Area */}
             <div className="messages-area">
-              {messages.length === 0 ? (
-                <p className="no-messages">Chưa có tin nhắn nào. Hãy bắt đầu cuộc hội thoại! 👋</p>
-              ) : (
-                  messages.map((msg, idx) => {
-                    // Merge reactions from state into message object
-                    const messageWithReactions = {
-                      ...msg,
-                      reactions: reactions[msg.id] || msg.reactions || {}
-                    };
-                      // Transform array of reactions into object format for display
-                      if (Array.isArray(messageWithReactions.reactions)) {
-                        const reactionsObj = {};
-                        messageWithReactions.reactions.forEach((r) => {
-                          if (!reactionsObj[r.reaction]) {
-                            reactionsObj[r.reaction] = [];
-                          }
-                          reactionsObj[r.reaction].push(r.user_id);
-                        });
-                        messageWithReactions.reactions = reactionsObj;
-                      }
-                    return (
-                      <MessageBubble
-                        key={idx}
-                        message={messageWithReactions}
-                        isSent={msg.isSent}
-                        isGroup={!!selectedGroup}
-                        onRetry={handleRetry}
-                        onReply={(message) => {
-                          setReplyTo(message);
-                          // Auto-focus input
-                          inputRef.current?.focus();
-                        }}
-                        onReaction={(messageId, emoji) => {
-                          sendReaction(messageId, currentUserId, emoji);
-                        }}
-                        onEmojiHover={(messageId, emoji) => {
-                          // Clear any pending clear timeout
-                          if (hoverClearTimeoutRef.current) {
-                            clearTimeout(hoverClearTimeoutRef.current);
-                            hoverClearTimeoutRef.current = null;
-                          }
+              {/* Only show messages that belong to the currently selected conversation.
+                  - If a group is selected: show messages with matching `group_id`.
+                  - If a 1:1 user is selected: show messages without `group_id` where the
+                    sender_id or receiver_id matches the selected user. */}
+              {(() => {
+                const visibleMessages = (messages || []).filter((m) => {
+                  try {
+                    if (selectedGroup && selectedGroup.id) {
+                      return String(m.group_id) === String(selectedGroup.id);
+                    }
+                    if (selectedUser && selectedUser.id) {
+                      // exclude group messages when in 1:1 chat
+                      if (m.group_id) return false;
+                      return String(m.sender_id) === String(selectedUser.id) || String(m.receiver_id) === String(selectedUser.id);
+                    }
+                    // no selection -> show nothing
+                    return false;
+                  } catch (e) {
+                    return false;
+                  }
+                });
 
-                          if (emoji) {
-                            // User is hovering an emoji — show preview
-                            setHoverReaction(emoji);
-                          } else {
-                            // Start a short timeout before clearing hover so user can move to the input
-                            hoverClearTimeoutRef.current = setTimeout(() => {
-                              setHoverReaction(null);
-                              hoverClearTimeoutRef.current = null;
-                            }, 700);
-                          }
-                        }}
-                      />
-                    );
-                  })
-              )}
+                if (!visibleMessages || visibleMessages.length === 0) {
+                  return <p className="no-messages">Chưa có tin nhắn nào. Hãy bắt đầu cuộc hội thoại! 👋</p>;
+                }
+
+                return visibleMessages.map((msg, idx) => {
+                  // Merge reactions from state into message object
+                  const messageWithReactions = {
+                    ...msg,
+                    reactions: reactions[msg.id] || msg.reactions || {}
+                  };
+                  // Transform array of reactions into object format for display
+                  if (Array.isArray(messageWithReactions.reactions)) {
+                    const reactionsObj = {};
+                    messageWithReactions.reactions.forEach((r) => {
+                      if (!reactionsObj[r.reaction]) {
+                        reactionsObj[r.reaction] = [];
+                      }
+                      reactionsObj[r.reaction].push(r.user_id);
+                    });
+                    messageWithReactions.reactions = reactionsObj;
+                  }
+
+                  return (
+                    <MessageBubble
+                      key={idx}
+                      message={messageWithReactions}
+                      isSent={msg.isSent}
+                      isGroup={!!selectedGroup}
+                      onRetry={handleRetry}
+                      onReply={(message) => {
+                        setReplyTo(message);
+                        // Auto-focus input
+                        inputRef.current?.focus();
+                      }}
+                      onReaction={(messageId, emoji) => {
+                        sendReaction(messageId, currentUserId, emoji);
+                      }}
+                      onEmojiHover={(messageId, emoji) => {
+                        // Clear any pending clear timeout
+                        if (hoverClearTimeoutRef.current) {
+                          clearTimeout(hoverClearTimeoutRef.current);
+                          hoverClearTimeoutRef.current = null;
+                        }
+
+                        if (emoji) {
+                          // User is hovering an emoji — show preview
+                          setHoverReaction(emoji);
+                        } else {
+                          // Start a short timeout before clearing hover so user can move to the input
+                          hoverClearTimeoutRef.current = setTimeout(() => {
+                            setHoverReaction(null);
+                            hoverClearTimeoutRef.current = null;
+                          }, 700);
+                        }
+                      }}
+                    />
+                  );
+                });
+              })()}
               <TypingIndicator userName={null} isTyping={false} />
               {/* Ref để scroll xuống */}
               <div ref={messagesEndRef} />
